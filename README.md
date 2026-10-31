@@ -68,6 +68,8 @@ const result = await verifyPublic(text, fetchRecord, { 1: publicKey });
 
 **Other languages:** [`spec/test-vectors.json`](spec/test-vectors.json) contains fixed inputs and outputs (normalization, base-3 encoding, signature 0xF2, Choice-Point-Mark, provenance 0xF3). A port (Python, PHP, …) is correct if it reproduces all vectors. The format is described on the [about page](server/about.html). Regenerate with `npm run test-vectors`.
 
+**Integrating into an existing chatbot:** see [AGENTS.md](AGENTS.md) – where to mark, history and storage, widget, verification, non-Node backends, pitfalls and an acceptance checklist. Coding agents read it automatically.
+
 ## How it works
 
 - **Carriers:** ZWNJ (U+200C) = 0, ZWJ (U+200D) = 1, Word Joiner (U+2060) = 2, base 3, as a run directly behind a sentence or line end. They were chosen with the diagnostic tests on the test page: invisible in Word for Mac and surviving Gmail and Outlook Web singly, as runs and as mixes. Variation selectors (the usual choice) fail: Word shows them as boxes, Outlook Web removes VS17–VS256 and Gmail removes runs of 8 or more.
