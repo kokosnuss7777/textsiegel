@@ -1,0 +1,12 @@
+node_modules/
+dist/
+e2e/test-results/
+e2e/playwright-report/
+.DS_Store
+.claude/
+# local working material, not part of the repository
+recherche-artikel-50/
+report/
+records/
+*.pem
+deploy/textsiegel.env

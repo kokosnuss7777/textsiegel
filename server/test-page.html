@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>textsiegel test page</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<style>
+  :root {
+    --bg: #f4f5f7; --panel: #fff; --text: #1d2330; --muted: #667085; --line: #e3e6eb;
+    --accent: #2f6fed; --bot: #f1f3f6; --ok: #127a3e; --ok-bg: #e5f5ec; --warn: #9a5b00; --warn-bg: #fff3dc;
+    --bad: #b42318; --bad-bg: #fdecea; --mark: #ffe08a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12151b; --panel: #1b1f27; --text: #e6e9ef; --muted: #98a2b3; --line: #2c323d;
+      --accent: #6e9bff; --bot: #252a34; --ok: #6fd69b; --ok-bg: #173826; --warn: #f2c063; --warn-bg: #3a2c10;
+      --bad: #ff8a80; --bad-bg: #3d1a17; --mark: #6b5513;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { padding: 16px; max-width: 1200px; margin: 0 auto; }
+  header h1 { font-size: 20px; margin: 0 0 4px; }
+  header p { margin: 0; color: var(--muted); }
+  main { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 16px; padding: 0 16px 32px; max-width: 1200px; margin: 0 auto; }
+  @media (max-width: 860px) { main { grid-template-columns: minmax(0, 1fr); } }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; min-width: 0; }
+  h2 { font-size: 15px; margin: 0 0 12px; }
+  label { font-size: 13px; color: var(--muted); }
+  select, button, textarea { font: inherit; color: inherit; }
+  select, textarea { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+  button { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  button.secondary { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+
+  /* widget replica */
+  .widget { border: 1px solid var(--line); border-radius: 16px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+  .widget-head { background: var(--accent); color: #fff; padding: 10px 14px; font-weight: 600; font-size: 14px; margin: 0; }
+  .widget-body { padding: 14px; height: 520px; overflow-y: auto; background: var(--panel); }
+  .msg { margin-bottom: 12px; display: flex; flex-direction: column; }
+  .msg.user .bubble { align-self: flex-end; background: var(--accent); color: #fff; }
+  .bubble { background: var(--bot); border-radius: 14px; padding: 10px 12px; max-width: 92%; overflow-wrap: anywhere; font-size: 14px; }
+  .bubble > :first-child { margin-top: 0; } .bubble > :last-child { margin-bottom: 0; }
+  .bubble p, .bubble ul, .bubble ol { margin: 0 0 8px; } .bubble ul, .bubble ol { padding-left: 20px; }
+  .bubble h2, .bubble h3 { font-size: 15px; margin: 4px 0 8px; }
+  .bubble table { border-collapse: collapse; margin-bottom: 8px; } .bubble td, .bubble th { border: 1px solid var(--line); padding: 3px 6px; }
+  .bubble code { font-size: 12.5px; background: rgba(127,127,127,.15); padding: 1px 4px; border-radius: 4px; }
+  .bubble a { color: var(--accent); }
+  .msg-actions { display: flex; gap: 6px; margin-top: 4px; }
+  .msg-actions button { font-size: 12px; padding: 2px 8px; }
+
+  /* signature positions */
+  .debug { margin-top: 12px; font: 12px/1.6 ui-monospace, Menlo, monospace; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--bg); border-radius: 8px; padding: 10px; max-height: 260px; overflow: auto; }
+  .debug .s { background: var(--accent); color: #fff; border-radius: 3px; padding: 0 3px; font-size: 10px; }
+  .debug .n { background: var(--mark); border-radius: 2px; }
+
+  /* verification */
+  textarea { width: 100%; min-height: 140px; resize: vertical; }
+  .result { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; margin: 12px 0; }
+  .card { border: 1px solid var(--line); border-radius: 8px; padding: 10px; font-size: 13px; }
+  .card b { display: block; margin-bottom: 4px; }
+  .verdict { display: inline-block; border-radius: 999px; padding: 1px 10px; font-weight: 600; font-size: 13px; }
+  .v-signiert { background: var(--ok-bg); color: var(--ok); }
+  .v-statistisch { background: var(--warn-bg); color: var(--warn); }
+  .v-kein { background: var(--bad-bg); color: var(--bad); }
+  .muted { color: var(--muted); font-size: 13px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .warn { margin-top: 6px; background: var(--warn-bg); color: var(--warn); border-radius: 6px; padding: 4px 8px; font-size: 12.5px; }
+  .tablewrap { overflow-x: auto; }
+  table.log { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.log th, table.log td { text-align: left; border-bottom: 1px solid var(--line); padding: 5px 6px; white-space: nowrap; }
+  table.log th { color: var(--muted); font-weight: 500; }
+  table.carriers { margin-top: 8px; table-layout: fixed; }
+  table.carriers td, table.carriers th { white-space: normal; overflow-wrap: anywhere; padding: 3px 4px; }
+  table.carriers td:last-child, table.carriers th:last-child { width: 4.5em; }
+</style>
+</head>
+<body>
+<header>
+  <h1>textsiegel copy-paste test</h1>
+  <p>Left: the response as in the chat widget – streamed, sentence by sentence, Markdown. Copy it, paste it into the target program, copy it there again and paste it on the right. (The sample responses are German, as the Choice-Point-Mark classes are defined for German text.)</p>
+</header>
+<main>
+  <section>
+    <h2>Widget</h2>
+    <div class="row">
+      <select id="answer" aria-label="Response"></select>
+      <select id="mode" aria-label="Signature method">
+        <option value="internal">signature, internal (HMAC)</option>
+        <option value="public">provenance, public (Ed25519)</option>
+      </select>
+      <button id="play">Generate again</button>
+      <label><input type="checkbox" id="slow" checked> streaming speed</label>
+      <label><input type="checkbox" id="plain"> show without signature (listening comparison)</label>
+    </div>
+    <div class="widget">
+      <h3 class="widget-head">Gärtnerei Lindenhof · Assistant</h3>
+      <div class="widget-body" id="chat" aria-live="polite"></div>
+    </div>
+    <p class="sr-only" id="status" role="status" aria-live="polite"></p>
+    <p class="muted" id="meta"></p>
+    <label><input type="checkbox" id="showSig"> show signature positions and no-break spaces</label>
+    <div class="debug" id="debug" hidden></div>
+  </section>
+
+  <section>
+    <h2>Verification</h2>
+    <div class="row">
+      <select id="target" aria-label="Target program">
+        <option>Word (Mac)</option><option>Word (Windows)</option><option>Word Online</option><option>Google Docs</option>
+        <option>Outlook</option><option>Gmail</option><option>Slack</option><option>WhatsApp Web</option>
+        <option>WhatsApp iOS</option><option>WhatsApp Android</option><option>Notepad</option><option>TextEdit</option>
+        <option>WordPress</option><option>direct (no target program)</option>
+      </select>
+      <select id="path" aria-label="Copy method">
+        <option>select + Ctrl/Cmd+C</option><option>copy button (text)</option><option>copy button (formatted)</option>
+      </select>
+    </div>
+    <div class="row">
+      <span class="muted">Counter-check with the current response:</span>
+      <button class="secondary" data-probe="noSig">without signature</button>
+      <button class="secondary" data-probe="noSigNbsp">without signature and no-break spaces</button>
+      <button class="secondary" data-probe="tampered">signatures tampered</button>
+      <button class="secondary" data-probe="foreign">signature attached to a foreign sentence</button>
+    </div>
+    <label for="paste">Paste the text from the target program here (Ctrl/Cmd+V), it is checked immediately</label>
+    <textarea id="paste" aria-describedby="paste-hint" placeholder="Paste the text from the target program here (Ctrl/Cmd+V). Both the plain text and – if present – the HTML version of the clipboard are checked."></textarea>
+    <p class="sr-only" id="paste-hint">Ctrl or Cmd plus Enter checks the content of the field again.</p>
+    <div class="result" id="result" aria-live="polite"></div>
+    <div class="row">
+      <h2 style="margin:0;flex:1">Test matrix</h2>
+      <button class="secondary" id="csv">Export CSV</button>
+      <button class="secondary" id="clear">Clear</button>
+    </div>
+    <div class="tablewrap">
+      <table class="log"><thead><tr><th>Time</th><th>Target</th><th>Method</th><th>Version</th><th>Verdict</th><th>Signatures valid/found</th><th>Marker chars</th><th>NBSP</th><th>Response</th><th>Unchanged copy</th><th>Characters/runs</th></tr></thead><tbody id="log"></tbody></table>
+    </div>
+    <p class="muted">The matrix is only stored in this browser.</p>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+// Signature/marker: run of ZWNJ/ZWJ/Word Joiner (as in src/signature.ts).
+const VS_RUN = /[‌‍⁠]{8,}/gu;
+let current = { text: "", responseId: "", id: "" };
+let log = [];
+try { log = JSON.parse(localStorage.getItem("textsiegel-matrix") || "[]"); } catch {}
+
+const render = (md) => marked.parse(md, { gfm: true, breaks: false });
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const esc = (s) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
+
+async function init() {
+  const ids = await (await fetch("/api/answers")).json();
+  $("answer").innerHTML = ids.map((id) => `<option>${id}</option>`).join("");
+  $("answer").onchange = $("mode").onchange = $("play").onclick = play;
+  $("showSig").onchange = showDebug;
+  $("plain").onchange = showAnswer;
+  drawLog();
+  play();
+}
+
+async function play() {
+  const id = $("answer").value;
+  const a = await (await fetch(`/api/answer?id=${encodeURIComponent(id)}&mode=${$("mode").value}`)).json();
+  const chat = $("chat");
+  // "busy" while streaming: screen readers read the answer once at the end instead of every chunk.
+  chat.setAttribute("aria-busy", "true");
+  // No roles or labels around the answer: on click, screen readers read the text, not a region name.
+  chat.innerHTML = `<div class="msg user"><div class="bubble">Question about: ${esc(a.id)}</div></div>
+    <div class="msg bot"><div class="bubble" id="bubble">…</div><div class="msg-actions" hidden id="actions">
+      <button class="secondary" id="copyText">Copy</button><button class="secondary" id="copyHtml">Copy (formatted)</button></div></div>`;
+  let text = "";
+  for (const chunk of a.chunks) {
+    text += chunk;
+    $("bubble").innerHTML = render(text); // the widget re-renders the text so far on every chunk
+    chat.scrollTop = chat.scrollHeight;
+    if ($("slow").checked) await sleep(250);
+  }
+  current = { text, responseId: a.responseId, id: a.id };
+  showAnswer();
+  chat.setAttribute("aria-busy", "false");
+  $("actions").hidden = false;
+  $("copyText").onclick = () => copy("text");
+  $("copyHtml").onclick = () => copy("html");
+  const runs = text.match(VS_RUN) || [];
+  $("meta").innerHTML = esc(`${a.mode === "public" ? "public provenance" : `customer ${a.customerId}`} · response ID ${a.responseId} · ${a.chunks.length} stream chunks · ${runs.length} signatures`)
+    + (a.mode === "public" ? ` · <a href="/v1/records/${a.responseId}" target="_blank">record</a> · <a href="/.well-known/textsiegel-keys.json" target="_blank">keys</a>` : "");
+  showDebug();
+}
+
+/** Show the finished answer – for screen reader comparisons also without signature (copying stays signed). */
+function showAnswer() {
+  if (!current.text) return;
+  $("bubble").innerHTML = render($("plain").checked ? current.text.replace(VS_RUN, "") : current.text);
+}
+
+async function copy(kind) {
+  const btn = kind === "text" ? $("copyText") : $("copyHtml");
+  try {
+    if (kind === "text") await navigator.clipboard.writeText(current.text);
+    else await navigator.clipboard.write([new ClipboardItem({
+      "text/plain": new Blob([current.text], { type: "text/plain" }),
+      "text/html": new Blob([render(current.text)], { type: "text/html" }),
+    })]);
+    btn.textContent = "Copied ✓";
+    $("status").textContent = "Answer copied";
+  } catch (e) {
+    btn.textContent = "Error: " + e.name;
+    $("status").textContent = "Copy failed: " + e.name;
+  }
+  setTimeout(() => (btn.textContent = kind === "text" ? "Copy" : "Copy (formatted)"), 1500);
+}
+
+function showDebug() {
+  const box = $("debug");
+  box.hidden = !$("showSig").checked;
+  if (box.hidden) return;
+  box.innerHTML = esc(current.text)
+    .replace(VS_RUN, (m) => { const n = [...m].length; return `<span class="s" title="${n} characters">S${n === 101 || n === 81 ? "" : n}</span>`; })
+    .replace(/[  ]/g, (c) => `<span class="n" title="${c === " " ? "U+00A0 no-break space" : "U+202F narrow no-break space"}">${c === " " ? "·" : "˙"}</span>`);
+}
+
+$("paste").addEventListener("paste", (e) => {
+  const plain = e.clipboardData.getData("text/plain");
+  const html = e.clipboardData.getData("text/html");
+  setTimeout(() => runCheck([["plain text", plain || $("paste").value], ...(html ? [["HTML", htmlText(html)]] : [])]));
+});
+$("paste").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) runCheck([["plain text", $("paste").value]]);
+});
+
+/** Extract text from HTML the way a verifier would from a pasted web page or email. */
+function htmlText(html) {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  doc.querySelectorAll("style, script, meta, title").forEach((n) => n.remove());
+  return doc.body.innerText ?? doc.body.textContent ?? "";
+}
+
+/** Counter-checks: show that the verification can also return "altered", "statistical" and "none". */
+const PROBES = {
+  foreign: (t) => "Die Erde ist eine Scheibe." + (t.match(VS_RUN) || [""])[0],
+  noSig: (t) => t.replace(VS_RUN, ""),
+  noSigNbsp: (t) => t.replace(VS_RUN, "").replace(/[  ]/g, " "),
+  tampered: (t) => t.replace(VS_RUN, (m) => [...m].map((c, i) => (i === 8 ? (c === "‌" ? "‍" : "‌") : c)).join("")),
+};
+document.querySelectorAll("[data-probe]").forEach((b) => (b.onclick = () => {
+  if (!current.text) return;
+  runCheck([["counter-check: " + b.textContent, PROBES[b.dataset.probe](current.text)]], false);
+}));
+
+/** Text you get when copying directly from the widget – if it comes back unchanged, it never went through the target. */
+function widgetCopies() {
+  const sel = getSelection();
+  const saved = sel.rangeCount ? sel.getRangeAt(0) : null;
+  sel.selectAllChildren($("bubble"));
+  const selected = sel.toString();
+  sel.removeAllRanges();
+  if (saved) sel.addRange(saved);
+  return [current.text, selected, htmlText(render(current.text))].map((t) => t.trim());
+}
+
+/** Green: signed/verified; orange: genuine but altered, unverified or statistical only; red: none. */
+const verdictClass = (v) => (v === "signed" || v === "verified" ? "v-signiert" : v === "none" ? "v-kein" : "v-statistisch");
+
+/** Diagnostic tests: per candidate/line, whether everything arrived (and in the right order). */
+function diagnosticTable(rows, head, prefix = "") {
+  const mark = (z) => (z.found === z.expected && z.exact !== false ? "✅" : z.found <= 0 ? "❌" : "⚠️");
+  return `<table class="log carriers"><thead><tr><th>${head}</th><th>found</th></tr></thead><tbody>${rows
+    .map((z, i) => `<tr><td>${mark(z)} ${prefix ? `${prefix}${i + 1} ` : ""}${esc(z.name)}${z.exact === false && z.found === z.expected ? " (order changed)" : ""}${z.detail && (z.found !== z.expected) ? `<br><span class="muted">${esc(z.detail)}</span>` : ""}</td><td>${z.found < 0 ? "line missing" : `${z.found} of ${z.expected}`}</td></tr>`).join("")}</tbody></table>`;
+}
+
+async function runCheck(variants, record = true) {
+  const cards = [];
+  const direct = record ? widgetCopies() : [];
+  for (const [label, text] of variants) {
+    if (!text.trim()) continue;
+    const unchanged = direct.includes(text.trim());
+    const characterTest = current.id === "character-test";
+    const runTest = current.id === "run-test";
+    const carrierTest = current.id === "carrier-test";
+    const r = await (await fetch("/api/check", { method: "POST", body: JSON.stringify({ text }) })).json();
+    const cls = verdictClass(r.verdict);
+    const s = r.signature, d = r.diagnostics, p = r.provenance;
+    const same = s.responseId ? (s.responseId === current.responseId ? "this response" : "other response " + s.responseId) : "–";
+    cards.push(`<div class="card"><b>${label}</b><span class="verdict ${cls}">${r.verdict}</span>
+      ${unchanged ? `<div class="warn">Identical to a copy taken directly from the widget – was it copied again in the target program?</div>` : ""}
+      <div class="muted" style="margin-top:6px">Signatures valid ${s.valid} of ${s.found} in format · ${same}<br>
+      Sentence matches signature: ${s.contentChecked ? `${s.contentMatched} of ${s.contentChecked}` : "–"}<br>
+      Public provenance: ${p.sentences.length ? `${p.sentences.filter((x) => x.origin).length} of ${p.sentences.length} sentences confirmed, ${p.sentences.filter((x) => x.unchanged).length} unchanged` : "–"}<br>
+      Marker characters: ${d.markerCharacters} in ${d.markerRuns} runs (${d.markersComplete} complete)<br>
+      No-break spaces: ${d.nbsp} regular, ${d.narrowNbsp} narrow${d.zeroWidth ? ` · zero-width characters: ${d.zeroWidth}` : ""}<br>
+      Statistic: ${r.statistic ? `${r.statistic.matches}/${r.statistic.points} hits, p = ${r.statistic.pAdjusted.toExponential(1)}` : "–"}</div>
+      ${characterTest ? diagnosticTable(r.characterTest, "Character") : ""}${runTest ? diagnosticTable(r.runTest, "Run", "R") : ""}${carrierTest ? diagnosticTable(r.carrierTest, "Carrier", "C") : ""}</div>`);
+    if (record) log.unshift({
+      time: new Date().toLocaleString(), target: $("target").value, method: $("path").value, version: label,
+      verdict: r.verdict, sig: `${s.valid}/${s.found}`, markerChars: d.markerCharacters, nbsp: d.nbsp + d.narrowNbsp, response: current.id,
+      unchangedCopy: unchanged ? "yes" : "no",
+      diagnostics: characterTest ? r.characterTest.filter((z) => z.found === z.expected).map((z) => z.name.replace(/ \(.*$/, "")).join(", ") || "none"
+        : runTest ? r.runTest.map((z, i) => `R${i + 1} ${z.found}/${z.expected}`).join(", ")
+        : carrierTest ? r.carrierTest.map((z, i) => `C${i + 1} ${z.found}/${z.expected}${z.exact ? "" : " ≠"}`).join(", ") : "",
+    });
+  }
+  $("result").innerHTML = cards.join("") || `<p class="muted">Empty text.</p>`;
+  if (!record) return;
+  try { localStorage.setItem("textsiegel-matrix", JSON.stringify(log)); } catch {}
+  drawLog();
+}
+
+function drawLog() {
+  $("log").innerHTML = log.map((r) => `<tr><td>${r.time}</td><td>${esc(r.target)}</td><td>${esc(r.method)}</td><td>${r.version}</td>
+    <td><span class="verdict ${verdictClass(r.verdict)}">${r.verdict}</span></td>
+    <td>${r.sig}</td><td>${r.markerChars}</td><td>${r.nbsp}</td><td>${esc(r.response)}</td><td>${r.unchangedCopy ?? "–"}</td><td style="white-space:normal;min-width:220px">${esc(r.diagnostics ?? "")}</td></tr>`).join("");
+}
+
+$("clear").onclick = () => { log = []; try { localStorage.removeItem("textsiegel-matrix"); } catch {} drawLog(); };
+$("csv").onclick = () => {
+  const head = ["time", "target", "method", "version", "verdict", "sig", "markerChars", "nbsp", "response", "unchangedCopy", "diagnostics"];
+  const csv = [head.join(";"), ...log.map((r) => head.map((k) => `"${String(r[k] ?? "").replace(/"/g, '""')}"`).join(";"))].join("\n");
+  const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv" })), download: "copy-paste-matrix.csv" });
+  a.click();
+};
+
+init();
+</script>
+</body>
+</html>

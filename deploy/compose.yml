@@ -1,0 +1,10 @@
+# textsiegel server on a VPS. GitHub Actions builds the image (ghcr.io); the systemd timer pulls new versions.
+services:
+  textsiegel:
+    image: ghcr.io/kokosnuss7777/textsiegel:latest
+    restart: unless-stopped
+    env_file: textsiegel.env
+    ports:
+      - "127.0.0.1:8790:8787" # local only; exposed via tailscale serve / a reverse proxy
+    volumes:
+      - ./data:/data

@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>textsiegel check</title>
+<style>
+  :root { --bg: #f6f7f9; --panel: #fff; --text: #1d2330; --muted: #5a6475; --line: #c9ced7; --accent: #1f5fd6;
+    --ok: #0f6b35; --ok-bg: #e3f4e9; --warn: #7a4a00; --warn-bg: #fff1d6; --no: #8a1c12; --no-bg: #fde8e6; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #12151b; --panel: #1b1f27; --text: #e6e9ef; --muted: #a3acbb; --line: #3a4150; --accent: #7fa7ff;
+      --ok: #7fe0a6; --ok-bg: #173826; --warn: #f2c063; --warn-bg: #3a2c10; --no: #ff9a90; --no-bg: #3d1a17; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 26px; margin: 0 0 4px; } h2 { font-size: 19px; margin: 0 0 8px; }
+  p.lead { color: var(--muted); margin-top: 0; }
+  label { display: block; font-weight: 600; margin: 16px 0 6px; }
+  textarea { width: 100%; min-height: 200px; font: inherit; color: inherit; background: var(--panel); border: 2px solid var(--line); border-radius: 8px; padding: 10px; resize: vertical; }
+  button { font: inherit; font-weight: 600; border: 0; border-radius: 8px; padding: 10px 18px; background: var(--accent); color: #fff; cursor: pointer; margin-top: 12px; }
+  button.secondary { background: transparent; color: var(--accent); border: 2px solid var(--accent); }
+  button:disabled { opacity: .6; cursor: default; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .hint { color: var(--muted); font-size: 14px; }
+  #result { margin-top: 24px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+  .verdict { display: inline-block; font-weight: 700; border-radius: 6px; padding: 4px 10px; margin-bottom: 8px; }
+  .ok { background: var(--ok-bg); color: var(--ok); } .warn { background: var(--warn-bg); color: var(--warn); } .no { background: var(--no-bg); color: var(--no); }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 8px 0 0; } dt { color: var(--muted); } dd { margin: 0; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Check a text for an AI label</h1>
+  <p class="lead">Checks whether a text carries a textsiegel marking from <span data-provider>the provider</span>'s chatbot and whether it has been changed since. Free of charge. Whole paragraphs, emails or documents are fine.</p>
+
+  <form id="form">
+    <label for="text">Paste text</label>
+    <textarea id="text" name="text" required aria-describedby="privacy"></textarea>
+    <p class="hint" id="privacy">The text is only processed for this check and discarded immediately afterwards. It is neither stored nor logged.</p>
+    <button type="submit" id="check">Check</button>
+  </form>
+
+  <section id="result" aria-live="polite" aria-labelledby="result-title" hidden>
+    <div class="card">
+      <h2 id="result-title">Result</h2>
+      <div id="content"></div>
+      <button type="button" class="secondary" id="report">Download signed report</button>
+    </div>
+  </section>
+
+  <p class="hint">How the marking works and how authorities, press and researchers get unlimited access: <a href="about" data-page="about">about the AI label</a>.</p>
+</main>
+
+<script src="config.js"></script>
+<script>
+// Configuration: on GitHub Pages from config.js, on the server the API has the same origin.
+const CONFIG = window.TEXTSIEGEL || {};
+const API = CONFIG.api || "";
+const PROVIDER = CONFIG.provider || "the provider";
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+document.querySelectorAll("[data-provider]").forEach((el) => (el.textContent = PROVIDER));
+let lastReport = null;
+
+/** Plain-language explanation per verdict (text, not colour only). */
+const EXPLANATION = {
+  verified: ["ok", "Origin confirmed, unchanged", `The text contains sentences from a response of ${PROVIDER}'s chatbot. They are unchanged.`],
+  signed: ["ok", "Origin confirmed, unchanged", `The text contains sentences from a response of ${PROVIDER}'s chatbot. They are unchanged.`],
+  altered: ["warn", "Genuine marking, text altered", "The marking is genuine, but the text was changed or the marking was attached to other text."],
+  "signed-altered": ["warn", "Genuine marking, text altered", "The marking is genuine, but the text was changed or the marking was attached to other text."],
+  unverified: ["warn", "Marking without confirmed origin", "The text contains a marking in the textsiegel format whose origin cannot be confirmed."],
+  none: ["no", "No marking found", "No textsiegel marking found. This does not mean the text was written by a human: rewording or retyping removes the marking."],
+};
+
+$("form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const text = $("text").value;
+  if (!text.trim()) return;
+  $("check").disabled = true;
+  $("check").textContent = "Checking …";
+  try {
+    const res = await fetch(`${API}/v1/verify`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text }) });
+    const r = await res.json();
+    if (!res.ok) throw new Error(r.error || res.statusText);
+    show(r);
+  } catch (err) {
+    const hint = err instanceof TypeError ? "The verification service cannot be reached." : err.message;
+    $("content").innerHTML = `<p class="verdict no">Check not possible</p><p>${esc(hint)}</p>`;
+    $("report").hidden = true;
+    $("result").hidden = false;
+  } finally {
+    $("check").disabled = false;
+    $("check").textContent = "Check";
+  }
+});
+
+function show(r) {
+  const [cls, title, sentence] = EXPLANATION[r.verdict] || ["warn", r.verdict, ""];
+  const rep = r.report?.report;
+  const responses = (r.provenance?.responses || []).filter((a) => a.origin);
+  const rows = [
+    ["Technique", rep?.result.techniques.join(", ") || "–"],
+    ["Sentences with marking", rep ? String(rep.result.sentencesWithMarker) : "–"],
+    ["of which confirmed", rep ? String(rep.result.verified) : "–"],
+    ["of which unchanged", rep ? String(rep.result.unchanged) : "–"],
+    ...responses.map((a) => ["Response", `created ${new Date(a.createdAt).toLocaleString()}${a.model ? `, model ${a.model}` : ""}`]),
+  ];
+  $("content").innerHTML = `<p class="verdict ${cls}">${esc(title)}</p><p>${esc(sentence)}</p>
+    <dl>${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>`;
+  lastReport = r.report || null;
+  $("report").hidden = !lastReport;
+  $("result").hidden = false;
+}
+
+$("report").addEventListener("click", () => {
+  if (!lastReport) return;
+  const name = `textsiegel-report-${lastReport.report.timestamp.slice(0, 19).replace(/[:T]/g, "-")}.json`;
+  const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([JSON.stringify(lastReport, null, 2)], { type: "application/json" })), download: name });
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+</script>
+</body>
+</html>

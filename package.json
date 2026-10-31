@@ -1,0 +1,50 @@
+{
+  "name": "textsiegel",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Invisible, sentence-bound marking of AI-generated chatbot text (EU AI Act Art. 50(2)): HMAC signature, public Ed25519 provenance, statistical Choice-Point-Mark and a verification service",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepare": "npm run build",
+    "test": "node --test test/cpmark.test.ts test/signature.test.ts test/transform.test.ts test/provenance.test.ts test/service.test.ts test/test-vectors.test.ts",
+    "test:browser": "npm --prefix e2e test",
+    "demo": "node demo/demo.ts",
+    "server": "node server/server.ts",
+    "test-vectors": "node scripts/test-vectors.ts"
+  },
+  "engines": {
+    "node": ">=22.18"
+  },
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "spec"
+  ],
+  "devDependencies": {
+    "typescript": "7.0.2",
+    "@types/node": "26.6.6"
+  },
+  "author": "Daniel Wentland",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kokosnuss7777/textsiegel.git"
+  },
+  "homepage": "https://github.com/kokosnuss7777/textsiegel",
+  "keywords": [
+    "ai-act",
+    "watermark",
+    "provenance",
+    "ai-generated-content",
+    "text-watermarking",
+    "ed25519",
+    "chatbot"
+  ]
+}
