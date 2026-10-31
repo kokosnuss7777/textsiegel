@@ -48,6 +48,26 @@ async function pasteClipboard(page: Page): Promise<Pasted> {
   return page.evaluate(() => (window as any).__pasted);
 }
 
+/**
+ * Select the answer and copy it with Ctrl/Cmd+C. Firefox occasionally copies before the selection is applied;
+ * if no marker arrives, select and copy again (up to three times).
+ */
+async function copySelection(page: Page): Promise<Pasted> {
+  let pasted: Pasted = { plain: "", html: "" };
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await page.evaluate(() => {
+      document.getElementById("e2e-paste")?.remove();
+      (window as any).__pasted = undefined;
+      getSelection()!.selectAllChildren($("bubble"));
+    });
+    await page.keyboard.press("ControlOrMeta+C");
+    pasted = await pasteClipboard(page);
+    if (VS_RUN.test(pasted.plain)) break;
+  }
+  VS_RUN.lastIndex = 0;
+  return pasted;
+}
+
 function htmlToText(page: Page, html: string) {
   return page.evaluate((html) => htmlText(html), html);
 }
@@ -159,9 +179,7 @@ test("screen reader: answer in the accessibility tree", async ({ page }, info) =
 for (const id of COPY_ANSWERS) {
   test(`select + copy: ${id}`, async ({ page, request }, info) => {
     const { text, responseId } = await play(page, id);
-    await page.evaluate(() => getSelection()!.selectAllChildren($("bubble")));
-    await page.keyboard.press("ControlOrMeta+C");
-    const pasted = await pasteClipboard(page);
+    const pasted = await copySelection(page);
 
     const plain = await check(request, pasted.plain);
     expect(plain.verdict, "plain text").toBe("signed");
@@ -216,9 +234,7 @@ declare global {
 // additionally the keys document and a record without text.
 test("public provenance: copied answer confirmed via /v1/verify", async ({ page, request }) => {
   const { responseId } = await play(page, "delivery", "public");
-  await page.evaluate(() => getSelection()!.selectAllChildren($("bubble")));
-  await page.keyboard.press("ControlOrMeta+C");
-  const pasted = await pasteClipboard(page);
+  const pasted = await copySelection(page);
   const v = await (await request.post("/v1/verify", { data: { text: pasted.plain } })).json();
   expect(v.provenance.verdict).toBe("verified");
   expect(v.provenance.sentences.length).toBeGreaterThan(10);
