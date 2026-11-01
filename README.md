@@ -133,6 +133,10 @@ Online run with a 27B model (Choice-Point-Mark only): 2.2 choice points per 100 
 - Choice-Point-Mark classes exist for German only.
 - This is not legal advice. Whether a particular deployment satisfies Art. 50(2) depends on the whole system and its documentation.
 
+## Contributing and security
+
+`main` only accepts pull requests that pass the required checks (tests, browser tests, CodeQL); history is linear and squash-merged. Dependencies and pinned actions are updated by Dependabot. Report vulnerabilities privately, see [SECURITY.md](SECURITY.md). Container images carry signed build provenance: `gh attestation verify oci://ghcr.io/kokosnuss7777/textsiegel:latest -R kokosnuss7777/textsiegel`.
+
 ## License
 
 MIT, see [LICENSE](LICENSE).
