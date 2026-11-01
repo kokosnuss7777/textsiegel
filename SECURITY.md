@@ -20,6 +20,10 @@ Only the latest release and the `main` branch receive security fixes.
 
 ## Keys
 
-Never commit marking keys (`MARK_KEY`) or Ed25519 private keys. If a key was exposed, rotate it: issue a new
-Ed25519 key with a new key ID (keep the old public key published with `validTo` for verification of older texts)
-and a new `MARK_KEY` for future responses.
+Never commit marking keys (`MARK_KEY`) or Ed25519 private keys. If a key was exposed, replace it with a new
+`MARK_KEY` and a new Ed25519 key with a new key ID for future responses.
+
+Known limitation: the server currently publishes and accepts only one key of each kind. After a rotation, texts
+marked with the old keys can no longer be verified by the service. Keeping retired keys verifiable (old public key
+published with `validTo`, old `MARK_KEY` kept for verification only) is planned; the library already supports
+`validTo` in the key document (`keysDocument()`).
