@@ -19,7 +19,7 @@ async function check(request: APIRequestContext, text: string) {
 }
 
 /** Play a response like the widget (without streaming delay). */
-async function play(page: Page, id: string, mode: "internal" | "public" = "internal") {
+async function playAnswer(page: Page, id: string, mode: "internal" | "public" = "internal") {
   await page.goto("/");
   await page.waitForFunction(() => document.querySelectorAll("#answer option").length > 0);
   await page.evaluate(async ([id, mode]) => {
@@ -129,7 +129,7 @@ function pixelDiff(page: Page, a: Buffer, b: Buffer) {
 // signature. Boxes, gaps or line breaks would show up.
 test("rendering: the signature is invisible", async ({ page, request }, info) => {
   for (const id of (await answers(request)).filter((a) => !DIAGNOSTIC_TESTS.includes(a))) {
-    const { text } = await play(page, id);
+    const { text } = await playAnswer(page, id);
     const signatures = count(text, VS_RUN);
     expect(signatures, id).toBeGreaterThan(0);
     const bubble = await standaloneBubble(page);
@@ -159,7 +159,7 @@ test("rendering: the signature is invisible", async ({ page, request }, info) =>
 // "busy" after streaming. Whether the tree contains the signature characters is only recorded – what a screen
 // reader makes of them is a manual test.
 test("screen reader: answer in the accessibility tree", async ({ page }, info) => {
-  const { text } = await play(page, "delivery");
+  const { text } = await playAnswer(page, "delivery");
   await expect(page.locator("#chat")).toHaveAttribute("aria-busy", "false");
   const named = await page.evaluate(() => {
     const out: string[] = [];
@@ -178,7 +178,7 @@ test("screen reader: answer in the accessibility tree", async ({ page }, info) =
 
 for (const id of COPY_ANSWERS) {
   test(`select + copy: ${id}`, async ({ page, request }, info) => {
-    const { text, responseId } = await play(page, id);
+    const { text, responseId } = await playAnswer(page, id);
     const pasted = await copySelection(page);
 
     const plain = await check(request, pasted.plain);
@@ -198,7 +198,7 @@ for (const id of COPY_ANSWERS) {
   });
 
   test(`copy button (text): ${id}`, async ({ page, request }) => {
-    const { text, responseId } = await play(page, id);
+    const { text, responseId } = await playAnswer(page, id);
     await page.click("#copyText");
     await expect(page.locator("#copyText")).toHaveText("Copied ✓");
     const pasted = await pasteClipboard(page);
@@ -209,7 +209,7 @@ for (const id of COPY_ANSWERS) {
   });
 
   test(`copy button (formatted): ${id}`, async ({ page, request }) => {
-    const { text, responseId } = await play(page, id);
+    const { text, responseId } = await playAnswer(page, id);
     await page.click("#copyHtml");
     await expect(page.locator("#copyHtml")).toHaveText("Copied ✓");
     const pasted = await pasteClipboard(page);
@@ -233,7 +233,7 @@ declare global {
 // Public provenance (marker 0xF3): select + copy, then verify via /v1/verify with directory and public key;
 // additionally the keys document and a record without text.
 test("public provenance: copied answer confirmed via /v1/verify", async ({ page, request }) => {
-  const { responseId } = await play(page, "delivery", "public");
+  const { responseId } = await playAnswer(page, "delivery", "public");
   const pasted = await copySelection(page);
   const v = await (await request.post("/v1/verify", { data: { text: pasted.plain } })).json();
   expect(v.provenance.verdict).toBe("verified");
@@ -247,7 +247,7 @@ test("public provenance: copied answer confirmed via /v1/verify", async ({ page,
 
 // Public check page: labelled input, result as text (not colour only), signed report download, no statistic.
 test("check page: check a text, readable verdict, downloadable report", async ({ page }) => {
-  const { text } = await play(page, "delivery");
+  const { text } = await playAnswer(page, "delivery");
   await page.goto("/check");
   await page.getByLabel("Paste text").fill(text);
   await page.getByRole("button", { name: "Check" }).click();

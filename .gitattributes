@@ -1,0 +1,3 @@
+# Internal ticket history is not part of release archives.
+.scratch export-ignore
+.scratch/** export-ignore

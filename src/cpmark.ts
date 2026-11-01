@@ -134,8 +134,7 @@ function processSegment(prefix: string, seg: string, o: Options, mode: "mark" | 
       const blocked = blockedRanges(s);
       re.lastIndex = out.length;
       let handled = false;
-      let m: RegExpExecArray | null;
-      while ((m = re.exec(s))) {
+      for (let m = re.exec(s); m; m = re.exec(s)) {
         const start = m.index;
         const end = start + m[0].length;
         if (overlaps(start, end, blocked)) continue;

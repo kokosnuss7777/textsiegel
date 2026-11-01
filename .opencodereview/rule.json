@@ -1,0 +1,25 @@
+{
+  "include": [
+    "test/**/*.ts",
+    "e2e/tests/**/*.ts",
+    "docs/agents/test-quality-review.md",
+    "CLAUDE.md"
+  ],
+  "exclude": [
+    ".scratch/**",
+    ".thinkrail/**",
+    "report/**",
+    "records/**",
+    "dist/**",
+    "**/node_modules/**",
+    "e2e/test-results/**",
+    "e2e/report/**"
+  ],
+  "rules": [
+    {
+      "path": "**/*",
+      "merge_system_rule": true,
+      "rule": "# Behavioral test quality — mandatory project review\n\nReview changed production code and its tests together. Read docs/specs/textsiegel.md, spec/test-vectors.json, GLOSSARY.md and relevant ADRs for the authoritative behavior, public test seams and explicit deferrals; inspect existing tests before declaring coverage missing. The review procedure and evidence format are in docs/agents/test-quality-review.md. Derive risks and expected outcomes from the contract, independently of how the implementation happens to work. Apply the checks below where relevant; record a reason when a check is not applicable.\n\nTQ-01 — Equivalence classes: identify materially different valid, invalid and adversarial input classes. For marking: plain prose, Markdown structures (fences with backticks and tildes, indented code, tables, lists, headings ATX/setext, thematic breaks, quotes, links/autolinks, inline HTML), URLs and e-mail addresses at sentence ends, emoji with ZWJ, empty and whitespace-only text. For verification: genuine, edited, transplanted, truncated, forged and mixed markers of both versions, and texts without markers. Explain the concrete missing class and its risk.\n\nTQ-02 — Boundary values: check below, at and above each contract threshold: run length 7/8 carriers, marker lengths 81/101 and ±1, URL look-back length, quote search length, 80 word-start candidates, rate limit at the limit and one above, maximum body size, p-value threshold 1e-4 with Bonferroni correction. Include zero and one (no sentence, one sentence, no active class). Report an ambiguous contract instead of inventing an expected value.\n\nTQ-03 — Decision combinations: use a compact decision table for interacting conditions: signature valid × content matched × provenance present/verified/forged × expert or not → verdict and public verdict. Check that an unverifiable marker never upgrades a result and never silently downgrades a verified one. Do not demand every Cartesian combination without a risk.\n\nTQ-04 — State and sequences: streaming with arbitrary chunk boundaries (inside a carrier run, a multibyte character, a Markdown fence, a URL), flush after abort, one response ID per response, records finished after an aborted stream, rate limit windows over time, record cache within one verification. Streamed and non-streamed output must verify the same.\n\nTQ-05 — Assertions at the public seam: assert observable outcomes at the approved seams: library exports (markResponse, StreamMarker, verify, verifyPublic, verifyReport), HTTP responses of the server, rendered HTML of a real Markdown renderer and the clipboard in the browser tests. A verdict string alone does not prove that the visible text is unchanged; compare stripSignature(marked) with the expected visible text and the rendered structure. Avoid new tests coupled to private helpers.\n\nTQ-06 — Independent oracles: expected values come from spec/test-vectors.json, worked examples or the spec, not from the production function under test. Identify tautologies (marking and verifying with the same buggy normalization and asserting agreement), assertions that restate setup and conditional assertions that skip the important path. A test that a forgery fails must construct the forgery independently of the signer.\n\nTQ-07 — Adjacent regressions: follow the change into both marker versions, Choice-Point-Mark statistics (false positives on unmarked text), copy-paste robustness transforms, the check page, report signing, zero-retention logging and the test vectors. A changed or weakened old assertion needs a documented spec reason; a format change needs a new version byte and new vectors while old versions keep verifying.\n\nTQ-08 — Sensitivity and execution evidence: for critical protection rules identify a plausible wrong implementation and the test that should catch it, e.g. accepting any word start as sentence start, dropping digits' separators from the content key, logging the submitted text, an off-by-one rate limit. Require actual execution evidence before claiming a mutation was detected or a test failed before implementation. A diff alone cannot prove TDD chronology. Classify absent execution evidence as unverified, not as a proven defect.\n\nReport actionable findings with TQ ID, exact code/test location, contract or risk, a concrete counterexample, expected versus actual/missing observable outcome, and a focused test suggestion. Distinguish a demonstrated defect, a justified test gap and an evidence limitation. Passing tests, line coverage, a test count, OCR exit code zero or no findings alone do not establish test adequacy. Account for every selected file and all applicable TQ checks; a partial/skipped review cannot be reported as complete."
+    }
+  ]
+}

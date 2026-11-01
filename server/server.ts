@@ -201,7 +201,10 @@ const CARRIERS = [
 ];
 const mixed = (n: number, seed: number) => {
   let x = seed;
-  return Array.from({ length: n }, () => ((x = (x * 1103515245 + 12345) >>> 0), CARRIERS[(x >>> 16) & 3].ch)).join("");
+  return Array.from({ length: n }, () => {
+    x = (x * 1103515245 + 12345) >>> 0;
+    return CARRIERS[(x >>> 16) & 3].ch;
+  }).join("");
 };
 const CARRIER_CASES: { name: string; seq: string; line: (s: string) => string }[] = [
   ...CARRIERS.map((t) => ({ name: `${t.name} single, after a period`, seq: t.ch, line: (s: string) => `garden house and flowerpot.${s} Next` })),

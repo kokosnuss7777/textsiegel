@@ -164,6 +164,8 @@ Prove each point; paste outputs into the PR description.
 
 ## Working on textsiegel itself
 
+Agents changing textsiegel itself (not integrating it) follow [CLAUDE.md](CLAUDE.md): ticket, spec, ADR, TDD, PR.
+
 ```sh
 npm test               # Node tests
 npm run test:browser   # Playwright (Chromium, Firefox, WebKit)

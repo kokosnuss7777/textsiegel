@@ -74,8 +74,12 @@
 // On GitHub Pages API links point to the verification service (config.js); on the server they stay relative.
 const CONFIG = window.TEXTSIEGEL || {};
 const API = CONFIG.api || "";
-document.querySelectorAll("[data-provider]").forEach((el) => (el.textContent = CONFIG.provider || "the provider"));
-document.querySelectorAll("[data-api]").forEach((a) => (a.href = API + a.dataset.api));
+document.querySelectorAll("[data-provider]").forEach((el) => {
+  el.textContent = CONFIG.provider || "the provider";
+});
+document.querySelectorAll("[data-api]").forEach((a) => {
+  a.href = API + a.dataset.api;
+});
 document.getElementById("api-url").textContent = API || location.origin;
 if (CONFIG.contact) {
   const c = document.getElementById("contact");
@@ -84,7 +88,9 @@ if (CONFIG.contact) {
   c.append(a, ")");
 }
 // On GitHub Pages the check page is index.html.
-if (API) document.querySelectorAll("[data-page=check]").forEach((a) => (a.href = "./"));
+if (API) document.querySelectorAll("[data-page=check]").forEach((a) => {
+    a.href = "./";
+  });
 </script>
 </body>
 </html>
