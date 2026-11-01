@@ -110,8 +110,10 @@ function lineEndPosition(s: string, end: number): number | null {
   const start = s.lastIndexOf("\n", end - 1) + 1;
   const line = s.slice(start, end);
   if (/^ {0,3}(?:[-*_=] *){3,}$/.test(line) || (/^[\s|:-]*$/.test(line) && /\|/.test(line) && /-/.test(line))) return null;
-  const pipe = /\s*\|\s*$/.exec(line);
-  return pipe ? start + pipe.index : end;
+  // Same position as /\s*\|\s*$/ – without the regex, which retries every whitespace start on a long line.
+  const trimmed = line.trimEnd();
+  if (!trimmed.endsWith("|")) return end;
+  return start + trimmed.slice(0, -1).trimEnd().length;
 }
 
 /**

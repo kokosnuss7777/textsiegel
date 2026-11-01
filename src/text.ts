@@ -100,11 +100,12 @@ export function rangeChecker(ranges: Range[]): (start: number, end: number) => b
   const merged: Range[] = [];
   for (const [a, b] of [...ranges].sort((x, y) => x[0] - y[0])) {
     const last = merged[merged.length - 1];
-    if (last && a <= last[1]) last[1] = Math.max(last[1], b);
+    // Touching ranges stay apart, so an empty query at their boundary overlaps neither.
+    if (last && a < last[1]) last[1] = Math.max(last[1], b);
     else merged.push([a, b]);
   }
   return (start, end) => {
-    // The last range starting before `end` has the largest end of all of them (merged ranges are disjoint).
+    // The last range starting before `end` has the largest end of all of them (merged ranges do not overlap).
     let lo = 0;
     let hi = merged.length;
     while (lo < hi) {

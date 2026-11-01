@@ -230,12 +230,13 @@ test("content binding: a copied sentence preceded by foreign text stays valid", 
 });
 
 // Ticket 05: without active Choice-Point-Mark classes, marking must keep the text and only add signatures.
-test("signature only: no active classes keeps the text in all three APIs (ticket 05)", () => {
+test("signature only: no active classes or no choice point keeps the text in all three APIs (ticket 05)", () => {
   const customer = { id: 101, key: "customer-a-secret" };
-  const text = "Hallo Welt. Bestellungen bis 14 Uhr verschicken wir am selben Tag.";
+  const text = "Hallo Welt. Wir melden uns bald bei Ihnen.";
   const configs: { name: string; layers?: ("lexical" | "typography")[]; disabledClasses?: string[] }[] = [
     { name: "layers: []", layers: [] },
     { name: "every class disabled", disabledClasses: [...CLASSES.map((c) => c.id), QUOTE_CLASS_ID] },
+    { name: "all classes active, no choice point in the text" },
   ];
   for (const c of configs) {
     const o = { key: customer.key, layers: c.layers, disabledClasses: c.disabledClasses, signature: { customerId: customer.id } };

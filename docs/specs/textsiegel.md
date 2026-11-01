@@ -114,7 +114,7 @@ Endpoints:
 
 `POST /v1/verify` and the test page's `POST /api/check` take `{"text": "…"}` with at most `MAX_TEXT_LENGTH` = 100,000 characters (UTF-16 code units); the body may be at most 1,000,000 characters. Above either limit the answer is `413` before any processing. Invalid JSON, a body without a string `text` and a malformed request target get `400`. Any other error gets `500` with a fixed message; neither answers nor logs contain error messages, paths or submitted text.
 
-Protected-range detection, quotation pair search and the Choice-Point-Mark scan run in time linear in the text length (up to a logarithmic factor), so the length limit bounds the work per check.
+For verification, protected-range detection, quotation pair search and the Choice-Point-Mark scan run in time linear in the text length (up to a logarithmic factor). The exact p-value is quadratic in the number of distinct choice points (ticket 29); the length limit bounds it. Marking recomputes the protected ranges after every change and is quadratic in the worst case; it only processes the deployment's own chatbot output.
 
 `POST /v1/verify` returns the public verdict, the provenance details, the internal verdict and signature counts, and a signed report. The statistical result is included only for experts (`Authorization: Bearer <expert token>`). Non-experts are limited to `RATE_LIMIT` checks per hour per socket IP address (default 60) and get `429` above it. Behind a reverse proxy all clients share the proxy's address and therefore one limit (ticket 08).
 
@@ -134,4 +134,5 @@ Open tickets where v0.1.0 does not meet this text or where this text is under re
 - Content binding under review ([18](../../.scratch/textsiegel/issues/18-decide-content-binding-v2.md)): [03](../../.scratch/textsiegel/issues/03-content-key-ignores-decimal-and-sign.md), [04](../../.scratch/textsiegel/issues/04-prefix-edit-passes-content-binding.md), [11](../../.scratch/textsiegel/issues/11-rendered-links-break-content-binding.md).
 - Verdict combination and record cache: [06](../../.scratch/textsiegel/issues/06-check-page-overstates-unchanged.md), [09](../../.scratch/textsiegel/issues/09-forged-f3-overrides-hmac-verdict.md), [10](../../.scratch/textsiegel/issues/10-forged-key-id-poisons-record-cache.md).
 - Markdown placement gaps: [12](../../.scratch/textsiegel/issues/12-tilde-and-indented-code-unprotected.md), [13](../../.scratch/textsiegel/issues/13-long-quotes-get-rewritten.md), [14](../../.scratch/textsiegel/issues/14-spaced-thematic-break-rewritten.md), [15](../../.scratch/textsiegel/issues/15-short-setext-underline-broken.md), [16](../../.scratch/textsiegel/issues/16-atx-closing-hashes-visible.md), [17](../../.scratch/textsiegel/issues/17-long-autolink-gets-marker.md).
+- Verification cost: [29](../../.scratch/textsiegel/issues/29-detection-p-value-quadratic.md).
 - Key rotation: [19](../../.scratch/textsiegel/issues/19-retired-keys-stay-verifiable.md).
