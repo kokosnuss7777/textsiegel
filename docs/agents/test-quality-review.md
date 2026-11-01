@@ -19,8 +19,11 @@ node --test test/ocr-rules.test.ts
 1. **Freeze the input.** Finish the TDD step and commit. Record the baseline, the committed review HEAD and the worktree status; a range review excludes uncommitted work.
 
    ```sh
-   BASE=$(git merge-base origin/main HEAD)   # or the PR's base branch
+   BASE_REF=origin/main                      # the PR's base branch; fetch it first
+   git fetch origin main
+   BASE=$(git merge-base "$BASE_REF" HEAD)
    REVIEW_HEAD=$(git rev-parse HEAD)
+   echo "BASE=${BASE:?base ref $BASE_REF missing} REVIEW_HEAD=$REVIEW_HEAD"   # stop here if BASE is empty
    git status --short
    ```
 2. **Select files.**
