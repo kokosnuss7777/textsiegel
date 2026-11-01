@@ -78,7 +78,10 @@ const sanitized = (t: string) => stripSignature(t);
 /** Light editing: 15 % of the words removed (deterministic). */
 function edited(t: string): string {
   let seed = 7;
-  const rand = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+  const rand = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  };
   return t.split(/(\s+)/).filter((w) => /\s/.test(w) || rand() > 0.15).join("");
 }
 

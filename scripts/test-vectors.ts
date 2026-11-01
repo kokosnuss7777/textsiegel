@@ -72,9 +72,9 @@ export async function buildVectors() {
   };
 }
 
-const escape = (json: string) => json.replace(/[‌‍⁠︀-️  ]/g, (c) => "\\u" + c.charCodeAt(0).toString(16).padStart(4, "0"));
+const escapeUnicode = (json: string) => json.replace(/[‌‍⁠︀-️  ]/g, (c) => "\\u" + c.charCodeAt(0).toString(16).padStart(4, "0"));
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  writeFileSync(new URL("../spec/test-vectors.json", import.meta.url), escape(JSON.stringify(await buildVectors(), null, 2)) + "\n");
+  writeFileSync(new URL("../spec/test-vectors.json", import.meta.url), escapeUnicode(JSON.stringify(await buildVectors(), null, 2)) + "\n");
   console.log("spec/test-vectors.json written");
 }

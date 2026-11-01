@@ -91,7 +91,7 @@
         <option value="internal">signature, internal (HMAC)</option>
         <option value="public">provenance, public (Ed25519)</option>
       </select>
-      <button id="play">Generate again</button>
+      <button type="button" id="play">Generate again</button>
       <label><input type="checkbox" id="slow" checked> streaming speed</label>
       <label><input type="checkbox" id="plain"> show without signature (listening comparison)</label>
     </div>
@@ -120,10 +120,10 @@
     </div>
     <div class="row">
       <span class="muted">Counter-check with the current response:</span>
-      <button class="secondary" data-probe="noSig">without signature</button>
-      <button class="secondary" data-probe="noSigNbsp">without signature and no-break spaces</button>
-      <button class="secondary" data-probe="tampered">signatures tampered</button>
-      <button class="secondary" data-probe="foreign">signature attached to a foreign sentence</button>
+      <button type="button" class="secondary" data-probe="noSig">without signature</button>
+      <button type="button" class="secondary" data-probe="noSigNbsp">without signature and no-break spaces</button>
+      <button type="button" class="secondary" data-probe="tampered">signatures tampered</button>
+      <button type="button" class="secondary" data-probe="foreign">signature attached to a foreign sentence</button>
     </div>
     <label for="paste">Paste the text from the target program here (Ctrl/Cmd+V), it is checked immediately</label>
     <textarea id="paste" aria-describedby="paste-hint" placeholder="Paste the text from the target program here (Ctrl/Cmd+V). Both the plain text and – if present – the HTML version of the clipboard are checked."></textarea>
@@ -131,8 +131,8 @@
     <div class="result" id="result" aria-live="polite"></div>
     <div class="row">
       <h2 style="margin:0;flex:1">Test matrix</h2>
-      <button class="secondary" id="csv">Export CSV</button>
-      <button class="secondary" id="clear">Clear</button>
+      <button type="button" class="secondary" id="csv">Export CSV</button>
+      <button type="button" class="secondary" id="clear">Clear</button>
     </div>
     <div class="tablewrap">
       <table class="log"><thead><tr><th>Time</th><th>Target</th><th>Method</th><th>Version</th><th>Verdict</th><th>Signatures valid/found</th><th>Marker chars</th><th>NBSP</th><th>Response</th><th>Unchanged copy</th><th>Characters/runs</th></tr></thead><tbody id="log"></tbody></table>
@@ -151,7 +151,7 @@ try { log = JSON.parse(localStorage.getItem("textsiegel-matrix") || "[]"); } cat
 
 const render = (md) => marked.parse(md, { gfm: true, breaks: false });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const esc = (s) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
+const esc = (s) => String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
 
 async function init() {
   const ids = await (await fetch("/api/answers")).json();
@@ -172,7 +172,7 @@ async function play() {
   // No roles or labels around the answer: on click, screen readers read the text, not a region name.
   chat.innerHTML = `<div class="msg user"><div class="bubble">Question about: ${esc(a.id)}</div></div>
     <div class="msg bot"><div class="bubble" id="bubble">…</div><div class="msg-actions" hidden id="actions">
-      <button class="secondary" id="copyText">Copy</button><button class="secondary" id="copyHtml">Copy (formatted)</button></div></div>`;
+      <button type="button" class="secondary" id="copyText">Copy</button><button type="button" class="secondary" id="copyHtml">Copy (formatted)</button></div></div>`;
   let text = "";
   for (const chunk of a.chunks) {
     text += chunk;
@@ -236,7 +236,7 @@ $("paste").addEventListener("keydown", (e) => {
 /** Extract text from HTML the way a verifier would from a pasted web page or email. */
 function htmlText(html) {
   const doc = new DOMParser().parseFromString(html, "text/html");
-  doc.querySelectorAll("style, script, meta, title").forEach((n) => n.remove());
+  for (const n of doc.querySelectorAll("style, script, meta, title")) n.remove();
   return doc.body.innerText ?? doc.body.textContent ?? "";
 }
 
@@ -247,10 +247,12 @@ const PROBES = {
   noSigNbsp: (t) => t.replace(VS_RUN, "").replace(/[  ]/g, " "),
   tampered: (t) => t.replace(VS_RUN, (m) => [...m].map((c, i) => (i === 8 ? (c === "‌" ? "‍" : "‌") : c)).join("")),
 };
-document.querySelectorAll("[data-probe]").forEach((b) => (b.onclick = () => {
-  if (!current.text) return;
-  runCheck([["counter-check: " + b.textContent, PROBES[b.dataset.probe](current.text)]], false);
-}));
+for (const b of document.querySelectorAll("[data-probe]")) {
+  b.onclick = () => {
+    if (!current.text) return;
+    runCheck([["counter-check: " + b.textContent, PROBES[b.dataset.probe](current.text)]], false);
+  };
+}
 
 /** Text you get when copying directly from the widget – if it comes back unchanged, it never went through the target. */
 function widgetCopies() {
@@ -286,9 +288,9 @@ async function runCheck(variants, record = true) {
     const cls = verdictClass(r.verdict);
     const s = r.signature, d = r.diagnostics, p = r.provenance;
     const same = s.responseId ? (s.responseId === current.responseId ? "this response" : "other response " + s.responseId) : "–";
-    cards.push(`<div class="card"><b>${label}</b><span class="verdict ${cls}">${r.verdict}</span>
+    cards.push(`<div class="card"><b>${esc(label)}</b><span class="verdict ${cls}">${esc(r.verdict)}</span>
       ${unchanged ? `<div class="warn">Identical to a copy taken directly from the widget – was it copied again in the target program?</div>` : ""}
-      <div class="muted" style="margin-top:6px">Signatures valid ${s.valid} of ${s.found} in format · ${same}<br>
+      <div class="muted" style="margin-top:6px">Signatures valid ${s.valid} of ${s.found} in format · ${esc(same)}<br>
       Sentence matches signature: ${s.contentChecked ? `${s.contentMatched} of ${s.contentChecked}` : "–"}<br>
       Public provenance: ${p.sentences.length ? `${p.sentences.filter((x) => x.origin).length} of ${p.sentences.length} sentences confirmed, ${p.sentences.filter((x) => x.unchanged).length} unchanged` : "–"}<br>
       Marker characters: ${d.markerCharacters} in ${d.markerRuns} runs (${d.markersComplete} complete)<br>
@@ -311,9 +313,9 @@ async function runCheck(variants, record = true) {
 }
 
 function drawLog() {
-  $("log").innerHTML = log.map((r) => `<tr><td>${r.time}</td><td>${esc(r.target)}</td><td>${esc(r.method)}</td><td>${r.version}</td>
-    <td><span class="verdict ${verdictClass(r.verdict)}">${r.verdict}</span></td>
-    <td>${r.sig}</td><td>${r.markerChars}</td><td>${r.nbsp}</td><td>${esc(r.response)}</td><td>${r.unchangedCopy ?? "–"}</td><td style="white-space:normal;min-width:220px">${esc(r.diagnostics ?? "")}</td></tr>`).join("");
+  $("log").innerHTML = log.map((r) => `<tr><td>${esc(r.time)}</td><td>${esc(r.target)}</td><td>${esc(r.method)}</td><td>${esc(r.version)}</td>
+    <td><span class="verdict ${verdictClass(r.verdict)}">${esc(r.verdict)}</span></td>
+    <td>${esc(r.sig)}</td><td>${esc(r.markerChars)}</td><td>${esc(r.nbsp)}</td><td>${esc(r.response)}</td><td>${esc(r.unchangedCopy ?? "–")}</td><td style="white-space:normal;min-width:220px">${esc(r.diagnostics ?? "")}</td></tr>`).join("");
 }
 
 $("clear").onclick = () => { log = []; try { localStorage.removeItem("textsiegel-matrix"); } catch {} drawLog(); };

@@ -61,7 +61,7 @@ function lexical(
   } = {},
 ): ChoiceClass {
   const surfaces = new Map<string, number>();
-  variants.forEach((v, i) => surfaces.set(v.toLowerCase(), i));
+  for (const [i, v] of variants.entries()) surfaces.set(v.toLowerCase(), i);
   for (const [s, i] of Object.entries(opts.alt ?? {})) surfaces.set(s.toLowerCase(), i);
   for (const s of opts.recognizeOnly ?? []) surfaces.set(s.toLowerCase(), -1);
   const ordered = [...surfaces.keys()].sort((a, b) => b.length - a.length);

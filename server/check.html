@@ -62,7 +62,9 @@ const API = CONFIG.api || "";
 const PROVIDER = CONFIG.provider || "the provider";
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-document.querySelectorAll("[data-provider]").forEach((el) => (el.textContent = PROVIDER));
+document.querySelectorAll("[data-provider]").forEach((el) => {
+  el.textContent = PROVIDER;
+});
 let lastReport = null;
 
 /** Plain-language explanation per verdict (text, not colour only). */
