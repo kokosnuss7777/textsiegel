@@ -246,6 +246,22 @@ test("public provenance: copied answer confirmed via /v1/verify", async ({ page,
 });
 
 // Public check page: labelled input, result as text (not colour only), signed report download, no statistic.
+test("test page: labels and stored matrix fields are shown as text, not HTML (ticket 30)", async ({ page }) => {
+  const markup = '<img id="injected" src="x">';
+  await page.addInitScript((m) => {
+    const entry = { time: m, target: m, method: m, version: m, verdict: m, sig: m, markerChars: m, nbsp: m, response: m, unchangedCopy: m, diagnostics: m };
+    localStorage.setItem("textsiegel-matrix", JSON.stringify([entry]));
+  }, markup);
+  await playAnswer(page, "delivery");
+  await expect(page.locator("#log tr")).toHaveCount(1);
+  await expect(page.locator("#log tr td").nth(3)).toHaveText(markup);
+  const probe = page.locator('button[data-probe="noSig"]');
+  await probe.evaluate((b, m) => { b.textContent = m; }, markup);
+  await probe.click();
+  await expect(page.locator("#result .card b")).toHaveText(`counter-check: ${markup}`);
+  await expect(page.locator("#injected")).toHaveCount(0);
+});
+
 test("check page: check a text, readable verdict, downloadable report", async ({ page }) => {
   const { text } = await playAnswer(page, "delivery");
   await page.goto("/check");

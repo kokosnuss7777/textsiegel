@@ -38,3 +38,4 @@ Tickets 01, 02, 04, 09 and 10 describe security issues found by the opencode rev
 | [26](issues/26-back-up-ed25519-key.md) | Back up the Ed25519 key of the deployment | task | ready-for-human | open | - |
 | [27](issues/27-wcag-audit-check-page.md) | WCAG audit of check and about page | task | P3, needs-triage | open | - |
 | [28](issues/28-interoperability-review-2027.md) | Review interoperability before 2 Feb 2027 | research | needs-triage | open | - |
+| [30](issues/30-test-page-html-injection.md) | The test page inserts labels and stored log fields as HTML | implementation | bug, security, P2 | resolved | - |

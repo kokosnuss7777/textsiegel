@@ -151,7 +151,7 @@ try { log = JSON.parse(localStorage.getItem("textsiegel-matrix") || "[]"); } cat
 
 const render = (md) => marked.parse(md, { gfm: true, breaks: false });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const esc = (s) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
+const esc = (s) => String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
 
 async function init() {
   const ids = await (await fetch("/api/answers")).json();
@@ -288,9 +288,9 @@ async function runCheck(variants, record = true) {
     const cls = verdictClass(r.verdict);
     const s = r.signature, d = r.diagnostics, p = r.provenance;
     const same = s.responseId ? (s.responseId === current.responseId ? "this response" : "other response " + s.responseId) : "–";
-    cards.push(`<div class="card"><b>${label}</b><span class="verdict ${cls}">${r.verdict}</span>
+    cards.push(`<div class="card"><b>${esc(label)}</b><span class="verdict ${cls}">${esc(r.verdict)}</span>
       ${unchanged ? `<div class="warn">Identical to a copy taken directly from the widget – was it copied again in the target program?</div>` : ""}
-      <div class="muted" style="margin-top:6px">Signatures valid ${s.valid} of ${s.found} in format · ${same}<br>
+      <div class="muted" style="margin-top:6px">Signatures valid ${s.valid} of ${s.found} in format · ${esc(same)}<br>
       Sentence matches signature: ${s.contentChecked ? `${s.contentMatched} of ${s.contentChecked}` : "–"}<br>
       Public provenance: ${p.sentences.length ? `${p.sentences.filter((x) => x.origin).length} of ${p.sentences.length} sentences confirmed, ${p.sentences.filter((x) => x.unchanged).length} unchanged` : "–"}<br>
       Marker characters: ${d.markerCharacters} in ${d.markerRuns} runs (${d.markersComplete} complete)<br>
@@ -313,9 +313,9 @@ async function runCheck(variants, record = true) {
 }
 
 function drawLog() {
-  $("log").innerHTML = log.map((r) => `<tr><td>${r.time}</td><td>${esc(r.target)}</td><td>${esc(r.method)}</td><td>${r.version}</td>
-    <td><span class="verdict ${verdictClass(r.verdict)}">${r.verdict}</span></td>
-    <td>${r.sig}</td><td>${r.markerChars}</td><td>${r.nbsp}</td><td>${esc(r.response)}</td><td>${r.unchangedCopy ?? "–"}</td><td style="white-space:normal;min-width:220px">${esc(r.diagnostics ?? "")}</td></tr>`).join("");
+  $("log").innerHTML = log.map((r) => `<tr><td>${esc(r.time)}</td><td>${esc(r.target)}</td><td>${esc(r.method)}</td><td>${esc(r.version)}</td>
+    <td><span class="verdict ${verdictClass(r.verdict)}">${esc(r.verdict)}</span></td>
+    <td>${esc(r.sig)}</td><td>${esc(r.markerChars)}</td><td>${esc(r.nbsp)}</td><td>${esc(r.response)}</td><td>${esc(r.unchangedCopy ?? "–")}</td><td style="white-space:normal;min-width:220px">${esc(r.diagnostics ?? "")}</td></tr>`).join("");
 }
 
 $("clear").onclick = () => { log = []; try { localStorage.removeItem("textsiegel-matrix"); } catch {} drawLog(); };
