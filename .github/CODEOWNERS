@@ -1,0 +1,3 @@
+# Requests a review from the maintainer on every pull request (not enforced: with a single
+# maintainer, required code-owner approval would block every PR, since authors cannot approve their own).
+* @kokosnuss7777
