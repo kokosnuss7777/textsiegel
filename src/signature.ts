@@ -13,7 +13,7 @@
 // Forging without the key: probability 2^-48 per attempt.
 
 import { createHmac, randomBytes } from "node:crypto";
-import { blockedRanges, endsWithSentenceEnd, overlaps } from "./text.ts";
+import { blockedRanges, endsWithSentenceEnd, rangeChecker } from "./text.ts";
 
 const VERSION = 0xf2;
 const PAYLOAD_LEN = 20;
@@ -127,12 +127,12 @@ export function embedSignature(
 ): string {
   const prefix = opts.prefix ?? "";
   const s = prefix + text;
-  const blocked = blockedRanges(s);
+  const blocked = rangeChecker(blockedRanges(s));
   const at = new Set<number>(); // insert positions (after the preceding character), in s coordinates
   // Not directly behind a URL plus punctuation: Markdown renderers (GFM autolinks) would otherwise pull the
   // punctuation and the signature into the link.
   const afterUrl = (pos: number) => /(?:https?:\/\/|www\.)\S*$/i.test(s.slice(Math.max(0, pos - 300), pos));
-  const ok = (pos: number) => pos > prefix.length && /\S/.test(s[pos - 1]) && !overlaps(pos - 1, pos, blocked) && !afterUrl(pos);
+  const ok = (pos: number) => pos > prefix.length && /\S/.test(s[pos - 1]) && !blocked(pos - 1, pos) && !afterUrl(pos);
   const addLineEnd = (pos: number) => {
     const p = lineEndPosition(s, pos);
     if (p !== null && ok(p)) at.add(p);

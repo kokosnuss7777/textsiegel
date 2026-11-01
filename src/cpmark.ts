@@ -11,7 +11,7 @@
 
 import { createHmac } from "node:crypto";
 import { CLASSES, QUOTE_CLASS_ID, QUOTE_STYLES, type ChoiceClass, type Layer } from "./classes.ts";
-import { blockedRanges, endsWithSentenceEnd, findQuotePairs, overlaps, protectedRanges } from "./text.ts";
+import { blockedRanges, endsWithSentenceEnd, findQuotePairs, protectedRanges, rangeChecker } from "./text.ts";
 import { randomBytes } from "node:crypto";
 import { embedSignature, encodeSignature, stripSignature, verifySignature, type SignatureCheck } from "./signature.ts";
 import type { Provenance } from "./provenance.ts";
@@ -125,57 +125,46 @@ function processSegment(prefix: string, seg: string, o: Options, mode: "mark" | 
   const changes: Change[] = [];
 
   // Phase 1: word and character choice points, sequentially, context always taken from the output.
-  let out = prefix;
-  let rest = seg;
+  // `s` is the whole text so far; a change replaces the match in it and only then are the blocked ranges
+  // recomputed, so scanning stays linear (verification scans untrusted text).
+  let s = prefix + seg;
   if (classes.length > 0) {
     const re = combinedRegex(classes);
-    for (;;) {
-      const s = out + rest;
-      const blocked = blockedRanges(s);
-      re.lastIndex = out.length;
-      let handled = false;
-      for (let m = re.exec(s); m; m = re.exec(s)) {
-        const start = m.index;
-        const end = start + m[0].length;
-        if (overlaps(start, end, blocked)) continue;
-        const gi = Object.entries(m.groups!).findIndex(([, v]) => v !== undefined);
-        const cls = classes[Number(Object.keys(m.groups!)[gi].slice(1))];
-        if (cls.dotMix && !followOk(s.slice(end, end + 4))) continue;
-        const before = s.slice(0, start);
-        const ss = isSentenceStart(before);
-        if (cls.onlySentenceStart && !ss) continue;
-        const allowed = [...Array(cls.variantCount).keys()].filter((v) => !(ss && cls.notSentenceStart?.includes(v)));
-        if (allowed.length < 2) continue;
-        // Consistent formatting classes: one fixed context → the same variant throughout the text.
-        const ctx = cls.consistent ? "*" : prevToken(before);
-        const ssKey = cls.consistent ? false : ss;
-        const observed = cls.classify(m[0]);
-        const green = greenIndex(o.key, cls.id, ctx, ssKey, allowed);
-        points.push({
-          classId: cls.id, layer: cls.layer, index: start, text: m[0], context: ctx,
-          sentenceStart: ssKey, observed, green, allowed: allowed.length, match: observed === green,
-        });
-        if (mode === "mark" && observed !== green) {
-          const to = cls.render(m[0], green);
-          changes.push({ classId: cls.id, from: m[0], to });
-          out = before + to;
-        } else {
-          out = s.slice(0, end);
-        }
-        rest = s.slice(end);
-        handled = true;
-        break;
-      }
-      if (!handled) {
-        out = s;
-        rest = "";
-        break;
+    let blocked = rangeChecker(blockedRanges(s));
+    re.lastIndex = prefix.length;
+    for (let m = re.exec(s); m; m = re.exec(s)) {
+      const start = m.index;
+      const end = start + m[0].length;
+      if (blocked(start, end)) continue;
+      const gi = Object.entries(m.groups!).findIndex(([, v]) => v !== undefined);
+      const cls = classes[Number(Object.keys(m.groups!)[gi].slice(1))];
+      if (cls.dotMix && !followOk(s.slice(end, end + 4))) continue;
+      const before = s.slice(0, start);
+      const ss = isSentenceStart(before);
+      if (cls.onlySentenceStart && !ss) continue;
+      const allowed = [...Array(cls.variantCount).keys()].filter((v) => !(ss && cls.notSentenceStart?.includes(v)));
+      if (allowed.length < 2) continue;
+      // Consistent formatting classes: one fixed context → the same variant throughout the text.
+      const ctx = cls.consistent ? "*" : prevToken(before);
+      const ssKey = cls.consistent ? false : ss;
+      const observed = cls.classify(m[0]);
+      const green = greenIndex(o.key, cls.id, ctx, ssKey, allowed);
+      points.push({
+        classId: cls.id, layer: cls.layer, index: start, text: m[0], context: ctx,
+        sentenceStart: ssKey, observed, green, allowed: allowed.length, match: observed === green,
+      });
+      if (mode === "mark" && observed !== green) {
+        const to = cls.render(m[0], green);
+        changes.push({ classId: cls.id, from: m[0], to });
+        s = before + to + s.slice(end);
+        blocked = rangeChecker(blockedRanges(s));
+        re.lastIndex = start + to.length;
       }
     }
   }
 
   // Phase 2: quotation mark pairs (they change no words, hence separate).
-  let t = out;
+  let t = s;
   if (quotesActive(o)) {
     const { pairs } = findQuotePairs(t, protectedRanges(t));
     for (const p of pairs) {

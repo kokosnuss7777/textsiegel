@@ -28,13 +28,14 @@
 //                                            the text is not stored. Statistic only with an expert token.
 
 import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { readFile } from "node:fs/promises";
 import { readFileSync } from "node:fs";
 import { createPrivateKey, createPublicKey, generateKeyPairSync } from "node:crypto";
 import { StreamMarker, verify, SIGNATURE_RE } from "../src/cpmark.ts";
 import { fromRun } from "../src/signature.ts";
 import { createProvenance, verifyPublic } from "../src/provenance.ts";
-import { createRateLimiter, createVerificationService, fileDirectory, memoryDirectory } from "../src/service.ts";
+import { createRateLimiter, createVerificationService, fileDirectory, memoryDirectory, MAX_TEXT_LENGTH } from "../src/service.ts";
 import { SAMPLES } from "../demo/samples.ts";
 
 const PORT = Number(process.env.PORT ?? 8787);
@@ -294,20 +295,49 @@ const json = (body: unknown, status = 200) =>
   [status, { "content-type": "application/json; charset=utf-8", "access-control-allow-origin": "*" }, JSON.stringify(body)] as const;
 const html = async (file: string) => [200, { "content-type": "text/html; charset=utf-8" }, await readFile(new URL(`./${file}`, import.meta.url), "utf8")] as const;
 
-/** Read the request body, at most 1 MB. */
+/** A client error with a status code and a message that is safe to return (it never contains submitted text). */
+class HttpError extends Error {
+  readonly status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
+
+/** Read the request body, at most 1 MB (enough for MAX_TEXT_LENGTH characters even as JSON escapes). */
 async function readBody(req: AsyncIterable<Buffer>): Promise<string> {
   let body = "";
   for await (const c of req) {
     body += c;
-    if (body.length > 1_000_000) throw new Error("request too large");
+    if (body.length > 1_000_000) throw new HttpError(413, "Request too large.");
   }
   return body;
 }
 
-createServer(async (req, res) => {
-  const url = new URL(req.url ?? "/", "http://localhost");
+/** The `text` of a JSON body `{ "text": "…" }`, at most MAX_TEXT_LENGTH characters. */
+async function readText(req: AsyncIterable<Buffer>): Promise<string> {
+  let body: unknown;
+  try {
+    body = JSON.parse(await readBody(req));
+  } catch (e) {
+    if (e instanceof HttpError) throw e;
+    throw new HttpError(400, "Invalid JSON.");
+  }
+  const text = (body as { text?: unknown } | null)?.text;
+  if (typeof text !== "string") throw new HttpError(400, 'Expected {"text": "…"}.');
+  if (text.length > MAX_TEXT_LENGTH) throw new HttpError(413, `Text too long: at most ${MAX_TEXT_LENGTH.toLocaleString("en-US")} characters per check.`);
+  return text;
+}
+
+const server = createServer(async (req, res) => {
   let out: readonly [number, Record<string, string>, string];
   try {
+    let url: URL;
+    try {
+      url = new URL(req.url ?? "/", "http://localhost");
+    } catch {
+      throw new HttpError(400, "Bad request target.");
+    }
     if (!TEST_PAGE && (url.pathname === "/" || url.pathname.startsWith("/api/"))) {
       out = [404, { "content-type": "text/plain" }, "Not found"];
     } else if (req.method === "GET" && url.pathname === "/") {
@@ -317,7 +347,7 @@ createServer(async (req, res) => {
     } else if (req.method === "GET" && url.pathname === "/api/answer") {
       out = json(await answer(url.searchParams.get("id") ?? "", url.searchParams.get("mode") === "public"));
     } else if (req.method === "POST" && url.pathname === "/api/check") {
-      out = json(await check(String(JSON.parse(await readBody(req)).text ?? "")));
+      out = json(await check(await readText(req)));
     } else if (req.method === "GET" && url.pathname === "/check") {
       out = await html("check.html");
     } else if (req.method === "GET" && url.pathname === "/about") {
@@ -339,13 +369,24 @@ createServer(async (req, res) => {
       if (!limiter.allow(req.socket.remoteAddress ?? "?", Date.now(), { expert })) {
         out = json({ error: "Too many checks. Please try again later. Authorities, press and researchers get unlimited access – see /about." }, 429);
       } else {
-        out = json(await service.verify(String(JSON.parse(await readBody(req)).text ?? ""), { expert }));
+        out = json(await service.verify(await readText(req), { expert }));
       }
     } else {
       out = [404, { "content-type": "text/plain" }, "Not found"];
     }
   } catch (e) {
-    out = [500, { "content-type": "text/plain" }, String(e)];
+    if (e instanceof HttpError) {
+      out = json({ error: e.message }, e.status);
+    } else {
+      // No message: it may contain paths or, from verification, parts of the submitted text.
+      console.error("request failed", e instanceof Error ? e.name : typeof e, (e as { code?: string }).code ?? "");
+      out = json({ error: "Internal error." }, 500);
+    }
   }
   res.writeHead(out[0], out[1]).end(out[2]);
-}).listen(PORT, HOST, () => console.log(`textsiegel: http://${HOST === "0.0.0.0" ? "localhost" : HOST}:${PORT}  (customer ${CUSTOMER.id})`));
+});
+// PORT=0 picks a free port; the log line names the actual one (the server tests read it).
+server.listen(PORT, HOST, () => {
+  const { port } = server.address() as AddressInfo;
+  console.log(`textsiegel: http://${HOST === "0.0.0.0" ? "localhost" : HOST}:${port}  (customer ${CUSTOMER.id})`);
+});

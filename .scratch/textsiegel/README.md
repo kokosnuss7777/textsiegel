@@ -10,11 +10,11 @@ Tickets 01, 02, 04, 09 and 10 describe security issues found by the opencode rev
 
 | # | Title | Type | Labels | Status | Blocked by |
 |---|---|---|---|---|---|
-| [01](issues/01-malformed-url-crashes-server.md) | A malformed request path crashes the server | implementation | bug, security, P1, ready-for-agent | open | - |
-| [02](issues/02-email-regex-quadratic-dos.md) | E-mail detection is quadratic and blocks the service | implementation | bug, security, P1, ready-for-agent | open | - |
+| [01](issues/01-malformed-url-crashes-server.md) | A malformed request path crashes the server | implementation | bug, security, P1, ready-for-agent | claimed | - |
+| [02](issues/02-email-regex-quadratic-dos.md) | E-mail detection is quadratic and blocks the service | implementation | bug, security, P1, ready-for-agent | claimed | - |
 | [03](issues/03-content-key-ignores-decimal-and-sign.md) | Content key ignores decimal separators and signs | implementation | bug, P1, needs-triage | open | 18 |
 | [04](issues/04-prefix-edit-passes-content-binding.md) | A prefixed edit passes the content binding | implementation | bug, security, P1, needs-triage | open | 18 |
-| [05](issues/05-empty-layers-drops-text.md) | `layers: []` deletes the whole answer text | implementation | bug, P1, ready-for-agent | open | - |
+| [05](issues/05-empty-layers-drops-text.md) | `layers: []` deletes the whole answer text | implementation | bug, P1, ready-for-agent | claimed | - |
 | [06](issues/06-check-page-overstates-unchanged.md) | Check page says "unchanged" for partly changed texts | implementation | bug, P2, ready-for-agent | open | - |
 | [07](issues/07-utf8-split-across-chunks.md) | UTF-8 is corrupted at request chunk boundaries | implementation | bug, P2, ready-for-agent | open | - |
 | [08](issues/08-rate-limit-behind-proxy.md) | Rate limit is shared by all clients behind a reverse proxy | implementation | bug, P2, ready-for-agent | open | - |

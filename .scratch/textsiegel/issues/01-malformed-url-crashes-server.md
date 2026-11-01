@@ -1,10 +1,10 @@
 # A malformed request path crashes the server
 
 - Issue: 01
-- Status: open
+- Status: claimed
 - Type: implementation
 - Labels: bug, security, P1, ready-for-agent
-- Assignee: -
+- Assignee: Claude (agent), branch fix/p1-tickets-01-02-05
 - Parent: [map](../map.md)
 - Blocked by: -
 - Source: opencode review (Alibaba), 2026-10-31, finding 1
