@@ -1,6 +1,6 @@
 # Independent project, English, MIT
 
-Decision by Daniel (2026-10-31: "ich würde den Kern Fragbar-unabhängig haben wollen …", name "textsiegel", "mach einfach alles in Englisch", MIT), implemented in the initial commits of github.com/kokosnuss7777/textsiegel (no PR).
+Decision by Daniel (2026-10-31: keep the core independent of Fragbar, name it "textsiegel", write everything in English, MIT license), implemented in the initial commits of github.com/kokosnuss7777/textsiegel (no PR).
 
 textsiegel is a public repository under the MIT license. The core library knows nothing about Fragbar; anyone can use it and run their own verification service. Code, comments, docs, UI, commit messages and PR texts are English.
 

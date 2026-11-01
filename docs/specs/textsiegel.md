@@ -20,7 +20,7 @@ Out of scope: robustness against rewording; marking of user input, prompts or to
 `contentKey(sentence)`:
 
 1. Unicode NFKC.
-2. Remove a leading sequence of Markdown block markers: `#`–`######` + space, `>`, list bullets `-*+` + space, ordered list numbers `1.`/`1)` + space.
+2. Remove a leading sequence of Markdown block markers: `#`–`######` + space, `>`, list bullets `-*+` + space, ordered list numbers (one or more digits followed by `.` or `)`, regex `\d+[.)]`) + space.
 3. Lowercase.
 4. Keep only letters (`\p{L}`) and digits (`\p{N}`).
 
@@ -42,7 +42,7 @@ Payload, 20 bytes:
 
 Payload, 16 bytes: version `0xF3` · key ID (1) · response ID (8) · sentence number (2, big-endian, from 0) · sentence hash (4) = first 4 bytes of SHA-256(salt ‖ UTF-8 contentKey(sentence)).
 
-Record per response, canonical JSON (keys sorted, no whitespace), signed with Ed25519:
+Record per response, canonical JSON (keys sorted, no whitespace), signed with Ed25519. Field list in schema notation, not literal JSON (`?` = omitted when absent, `[]` = array):
 
 ```
 { v: 3, keyId, responseId, customer, createdAt, salt, model?, sentenceHashes[] }
@@ -54,18 +54,18 @@ Record per response, canonical JSON (keys sorted, no whitespace), signed with Ed
 
 A marker is placed directly behind the end of a sentence or line of the delivered text, except:
 
-- inside protected ranges: fenced code (backticks), inline code, URLs, e-mail addresses, HTML tags, Markdown link targets, quotations;
-- directly behind a URL at a sentence end (it would join the autolink);
+- inside protected ranges: fenced code (backticks), inline code, URLs, e-mail addresses, HTML tags, Markdown link targets, quotations (an opening and a matching closing quotation mark less than 400 characters apart; longer quotations are not protected, ticket 13);
+- directly behind a URL at a sentence end (it would join the autolink); a URL counts if it starts with `http://`, `https://` or `www.` within the 300 characters before the position and contains no whitespace up to it (ticket 17);
 - on Markdown table delimiter rows, thematic breaks and setext underlines; in a table row the marker goes into the last cell, before the closing `|`.
 
 Markdown that renders the same without markers must render the same with markers (see tickets 12, 14–17 for known gaps).
 
 ## 7. Choice-Point-Mark
 
-- Classes ([`src/classes.ts`](../../src/classes.ts)) define equivalent variants in two layers, `lexical` and `typography`, for German text. Protected ranges (§6) are never changed.
-- At a choice point, the variant is selected by HMAC-SHA256(mark key, `classId ‖ 0x00 ‖ context ‖ 0x00 ‖ "1"|"0"` (sentence start)); the first 4 bytes as uint32 big-endian modulo the number of allowed variants pick the variant. Context is the previous word or number (lowercase), `^` at text start.
+- Classes ([`src/classes.ts`](../../src/classes.ts)) define equivalent variants in two layers, `lexical` and `typography`, for German text. Protected ranges (§6) are never changed, with one exception: the quote class rewrites the quotation marks of a quotation (its delimiters) while the quoted content stays protected.
+- At a choice point, the variant is selected by HMAC-SHA256(mark key, `classId ‖ 0x00 ‖ context ‖ 0x00 ‖ "1"|"0"` (sentence start)); the first 4 bytes as uint32 big-endian modulo the number of allowed variants pick the variant. Context is the previous word or number (lowercase), `^` at text start. Classes marked `consistent` and the quote class use context `*` and sentence start `"0"` instead, so one variant holds for the whole text.
 - Detection counts hits per layer; the p-value is the exact Poisson-binomial tail per layer and combined. The smallest of the three, multiplied by 3 and by the number of keys tried, is compared with α = 10⁻⁴. Marked means p < α.
-- Choice-Point-Mark is optional per call (`layers`); without active classes, the text is only signed.
+- Choice-Point-Mark is optional per call (`layers`); without active classes, the text is only signed. v0.1.0 instead returns empty text for `layers: []` (ticket 05).
 
 ## 8. Streaming
 
@@ -112,9 +112,9 @@ Endpoints:
 | `GET /v1/records/{responseId}` | Provenance record (16 hex characters) |
 | `POST /v1/verify {"text": "…"}` | Verification; CORS `*` |
 
-`POST /v1/verify` returns the public verdict, the provenance details, the internal verdict and signature counts, and a signed report. The statistical result is included only for experts (`Authorization: Bearer <expert token>`). Non-experts are limited to `RATE_LIMIT` checks per hour per client (default 60) and get `429` above it.
+`POST /v1/verify` returns the public verdict, the provenance details, the internal verdict and signature counts, and a signed report. The statistical result is included only for experts (`Authorization: Bearer <expert token>`). Non-experts are limited to `RATE_LIMIT` checks per hour per socket IP address (default 60) and get `429` above it. Behind a reverse proxy all clients share the proxy's address and therefore one limit (ticket 08).
 
-Report: `{ type: "textsiegel-report", version: 1, service, timestamp, contentHash: "sha256:…", result: { verdict, techniques, sentencesWithMarker, verified, unchanged } }`, signed with Ed25519 over its canonical JSON; verifiable with `verifyReport()` and the key document.
+Report (schema notation, not literal JSON): `{ type: "textsiegel-report", version: 1, service, timestamp, contentHash: "sha256:…", result: { verdict, techniques, sentencesWithMarker, verified, unchanged } }`, signed with Ed25519 over its canonical JSON; verifiable with `verifyReport()` and the key document.
 
 Retention: submitted text exists only in memory during the request. The log line contains timestamp, verdicts, marker and response counts only – never text or hashes of it ([ADR-0008](../adr/0008-verification-service-code-of-practice.md)).
 

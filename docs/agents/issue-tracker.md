@@ -24,11 +24,11 @@ The repository is public, and so is the tracker: no secrets, no private data, an
 
 - **Map:** `map.md` with Destination, Notes, Decisions so far, Not yet specified and Out of scope; `Children:` lists its tickets.
 - **Blocking:** `Blocked by:` lists direct dependencies; a blocker is satisfied when it is `resolved` or `closed`.
-- **Frontier:** children of the map with `Status: open`, no assignee, no open blockers and not `ready-for-human`, lowest priority number first (P1 before P2), then lowest ticket number.
+- **Frontier:** children of the map with `Status: open`, no assignee, no open blockers and none of the labels `ready-for-human`, `needs-info` or `needs-triage`, lowest priority number first (P1 before P2), then lowest ticket number.
 
 ## When a skill says "publish to the issue tracker"
 
-Create or update the ticket file and its index row and map link. Implementation tickets state acceptance criteria, non-goals, dependencies and required checks, and reference the spec.
+Create or update the ticket file and its index row and map link. Implementation tickets state acceptance criteria and dependencies, and reference the spec section they touch (`Spec:` line under `## Problem`). They add `## Non-goals` when the scope could be read wider. Required checks are the repository's standard checks (`npm run lint`, `npm test`, `npm run build`, `npm run test:browser`) unless the ticket lists more under `## Required checks`.
 
 ## When a skill says "fetch the relevant ticket"
 

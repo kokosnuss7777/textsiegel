@@ -14,6 +14,12 @@
 
 `server/server.ts` (around line 304) calls `new URL(...)` outside the `try` block. A request path such as `//[` throws, the error is unhandled and the Node process exits with code 1. One request takes the service down until the container restarts.
 
+Spec: [§10 Verification service](../../../docs/specs/textsiegel.md#10-verification-service).
+
+## Non-goals
+
+- Request validation beyond the request target (body limits are ticket 02, chunk decoding ticket 07).
+
 ## Acceptance criteria
 
 - [ ] RED first: a server test sends `GET //[` (raw HTTP, not via `fetch`, which normalizes) and then a valid request; the second request is answered.

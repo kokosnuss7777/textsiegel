@@ -16,7 +16,13 @@ node --test test/ocr-rules.test.ts
 
 ## Review a fixed implementation
 
-1. **Freeze the input.** Finish the TDD step. Record the baseline, the committed review HEAD and the worktree status. A range review excludes uncommitted work.
+1. **Freeze the input.** Finish the TDD step and commit. Record the baseline, the committed review HEAD and the worktree status; a range review excludes uncommitted work.
+
+   ```sh
+   BASE=$(git merge-base origin/main HEAD)   # or the PR's base branch
+   REVIEW_HEAD=$(git rev-parse HEAD)
+   git status --short
+   ```
 2. **Select files.**
 
    ```bash
@@ -31,7 +37,11 @@ node --test test/ocr-rules.test.ts
    ocr delegate rule --from "$BASE" --to "$REVIEW_HEAD" --rule .opencodereview/rule.json --format json <selected-paths...>
    ```
 
-   `<selected-paths...>` is a placeholder. Do not pass the full spec via `--background-file` (OCR rejects more than 8,000 characters); give the spec directly to the reviewer in step 4. Confirm TQ-01 to TQ-08 resolve for tests and production code. Export plain diffs with `--no-ext-diff --no-textconv --no-color` plus full-file context.
+   `<selected-paths...>` is a placeholder. Do not pass the full spec via `--background-file` (OCR rejects more than 8,000 characters); give the spec directly to the reviewer in step 4. Confirm TQ-01 to TQ-08 resolve for tests and production code. Export the plain diff with full-file context for the reviewer:
+
+   ```sh
+   git diff --no-ext-diff --no-textconv --no-color --function-context "$BASE" "$REVIEW_HEAD" -- <selected-paths...> > review.diff
+   ```
 4. **Delegate read-only.** A reviewer independent of the implementer gets the preview, the resolved rules, the fixed diff and files, [the spec](../specs/textsiegel.md), `spec/test-vectors.json`, the accepted ticket and the execution/TDD evidence. It reads adjacent existing tests before reporting a gap and modifies nothing.
 5. **Triage and repair.** Validate findings against the spec. A verified defect or high-risk gap gets a focused regression test and the normal RED/GREEN loop; a false positive gets a documented reason. Re-review the fix on its new refs. Nothing is merged or published automatically.
 

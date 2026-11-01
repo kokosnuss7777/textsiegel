@@ -1,6 +1,6 @@
 # HMAC signature by default, public provenance optional
 
-Decision by Daniel (2026-10-31: "reicht es denn nicht, wenn wir nur erkennen, dass die Nachricht von Fragbar ist?", then "Ja, Etappe 2"), implemented in the initial commits on `main` (no PR).
+Decision by Daniel (2026-10-31: recognising that a message comes from the operator's own chatbot is enough by default; public provenance follows as a second stage), implemented in the initial commits on `main` (no PR).
 
 The default marker is the HMAC signature (0xF2). It needs no storage: the verification service recomputes the HMAC with the mark key. Public provenance (0xF3) is optional. A provenance marker points to an Ed25519-signed record with sentence hashes only, so third parties can verify with the public key but need the directory.
 

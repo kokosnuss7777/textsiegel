@@ -12,7 +12,7 @@
 
 ## Problem
 
-`src/signature.ts:113`: for `## Title ##`, the appended marker prevents recognition of the closing hashes; the heading shows `Title ##`.
+`lineEndPosition` in `src/signature.ts` (called by `embedSignature` for every line end) returns the end of the line for `## Title ##`, so the appended marker prevents recognition of the closing hashes; the heading shows `Title ##`.
 
 ## Acceptance criteria
 

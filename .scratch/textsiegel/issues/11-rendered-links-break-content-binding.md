@@ -16,7 +16,7 @@ Link targets and HTML tag names are part of the content key (`src/signature.ts:4
 
 ## Notes
 
-Fix by computing the content key over the visible text (strip Markdown link targets, autolink brackets, HTML tags). This changes the content key → decide in 18.
+One option is to compute the content key over the visible text (strip Markdown link targets, autolink brackets, HTML tags). Trade-off: a changed link target inside a signed sentence would then still verify as `signed`, so the binding no longer covers URLs. Whether that is acceptable, or whether targets get their own binding, is decided in 18; this ticket does not pick the fix. Any change to the content key needs a new version byte.
 
 ## Acceptance criteria
 

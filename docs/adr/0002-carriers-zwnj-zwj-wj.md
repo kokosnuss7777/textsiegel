@@ -2,7 +2,7 @@
 
 Decision by Daniel (2026-10-30, after the character, run and carrier tests on the test page), implemented in the initial commits on `main` (no PR).
 
-Markers are runs of ZWNJ (U+200C) = 0, ZWJ (U+200D) = 1 and Word Joiner (U+2060) = 2, base 3, directly behind a sentence or line end. Measured by hand: invisible in Word for Mac, Word Online, Google Docs, Gmail, Outlook Web, WhatsApp Web and TextEdit; the runs survive Gmail and Outlook Web singly, as runs and mixed.
+Markers are runs of ZWNJ (U+200C) = 0, ZWJ (U+200D) = 1 and Word Joiner (U+2060) = 2, base 3, directly behind a sentence or line end. Measured by hand: invisible in Word for Mac, Word Online, Google Docs, Gmail, Outlook Web, WhatsApp Web and TextEdit; the runs survive Gmail and Outlook Web singly, as runs and mixed. Measured on 2026-10-30 on macOS with the browser versions current that day, using the character, run and carrier tests of the test page (`npm run server`, page `/`). App and browser versions were not recorded; ticket 24 repeats the measurement for the current markers and records them.
 
 ## Considered Options
 

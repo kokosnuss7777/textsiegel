@@ -31,7 +31,7 @@ Tickets 01, 02, 04, 09 and 10 describe security issues found by the opencode rev
 | [19](issues/19-retired-keys-stay-verifiable.md) | Keep retired keys verifiable after rotation | implementation | P2, ready-for-agent | open | - |
 | [20](issues/20-record-write-endpoint.md) | Authenticated write endpoint for provenance records | implementation | P2, needs-triage | open | 21 |
 | [21](issues/21-record-retention.md) | Decide the retention period for provenance records | grilling | needs-info, ready-for-human | open | - |
-| [22](issues/22-go-public-checklist.md) | Prepare the verification service for public access | task | ready-for-human | open | 01, 02, 07, 08, 26 |
+| [22](issues/22-go-public-checklist.md) | Prepare the verification service for public access | task | ready-for-human | open | 01–05, 07–10, 18, 26 |
 | [23](issues/23-marking-for-non-node-backends.md) | Marking for non-Node backends (port or sidecar) | research | needs-info | open | - |
 | [24](issues/24-hand-test-current-markers.md) | Hand-test the 101/81-carrier markers in mail and office apps | task | ready-for-human | open | - |
 | [25](issues/25-check-page-per-sentence-result.md) | Show the result per sentence on the check page | implementation | P3, needs-triage | open | - |

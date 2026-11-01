@@ -1,6 +1,6 @@
 # Protected `main` and supply-chain hardening
 
-Decision by Daniel (2026-10-31: "bitte sichere das Repo ab, dass nur PRs nach main kommen … Best Practices"), implemented in PR #1 and in the repository settings.
+Decision by Daniel (2026-10-31: protect the repository so that only pull requests reach `main`, following best practices), implemented in PR #1 and in the repository settings.
 
 - Ruleset "main: pull requests only": no deletion or force push, linear history, signed commits, pull request required (squash only, stale reviews dismissed, threads resolved), required checks `test` and `browser` (strict), CodeQL (high or higher). No bypass actors.
 - Ruleset "release tags are immutable" for `refs/tags/v*`.

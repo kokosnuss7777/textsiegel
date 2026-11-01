@@ -14,3 +14,4 @@ Fragbar runs on Mittwald Shared AI Hosting, and customers bring their own API ke
 
 - Works with every model and with streaming; the stream is released sentence by sentence.
 - Nothing survives rewording or retyping except the lexical part of Choice-Point-Mark. This limit is documented in README and on the about page.
+- Choice-Point-Mark is defined for German text only and needs many choice points for a significant result. Short or non-German answers rely on the signature alone.
