@@ -17,6 +17,6 @@
 ## Acceptance criteria
 
 - [ ] RED first: a raw HTTP test splits a multibyte character across two writes; report hash and verdict equal the unsplit request.
-- [ ] Collect `Buffer`s and decode once (or use `TextDecoder` with `stream: true`); keep enforcing the body limit of `readBody` (1,000,000 characters, checked on the decoded string) while reading, and decide whether it should count bytes instead.
+- [ ] Collect `Buffer`s and decode once (or use `TextDecoder` with `stream: true`); enforce a byte cap on the raw chunks before buffering them (today `readBody` only checks 1,000,000 decoded characters, which does not bound the bytes held in memory), and keep the decoded text limit after decoding.
 
 ## Comments

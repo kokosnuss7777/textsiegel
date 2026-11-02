@@ -54,7 +54,7 @@ Record per response, canonical JSON (keys sorted, no whitespace), signed with Ed
 
 A marker is placed directly behind the end of a sentence or line of the delivered text, except:
 
-- inside protected ranges: fenced code (backticks), inline code, URLs, e-mail addresses, HTML tags, Markdown link targets, quotations (an opening and a matching closing quotation mark less than 400 characters apart; longer quotations are not protected, ticket 13);
+- inside protected ranges: fenced code (backticks), inline code, URLs, e-mail addresses, HTML tags, Markdown link targets, quotations (an opening and a matching closing quotation mark less than 400 characters apart and not separated by a blank line; longer or multi-paragraph quotations are not protected, ticket 13);
 - directly behind a URL at a sentence end (it would join the autolink); a URL counts if it starts with `http://`, `https://` or `www.` within the 300 characters before the position and contains no whitespace up to it (ticket 17);
 - on Markdown table delimiter rows, thematic breaks and setext underlines; in a table row the marker goes into the last cell, before the closing `|`.
 
