@@ -78,6 +78,9 @@ export function publicKeysFromDocument(doc: KeysDocument): Record<number, KeyObj
   return Object.fromEntries(doc.keys.filter((k) => k.alg === "Ed25519").map((k) => [k.keyId, createPublicKey({ key: k.jwk, format: "jwk" })]));
 }
 
+/** Longest text (UTF-16 code units) the verification service accepts; longer texts get 413 before processing. */
+export const MAX_TEXT_LENGTH = 100_000;
+
 export const TECHNIQUE_SIGNATURE = "watermark: invisible characters, HMAC-signed";
 export const TECHNIQUE_PROVENANCE = "watermark: invisible characters, Ed25519 provenance";
 export const TECHNIQUE_STATISTICAL = "statistical watermark: word choice and typography";

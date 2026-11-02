@@ -12,16 +12,109 @@ export function protectedRanges(s: string): Range[] {
   };
   add(/```[\s\S]*?(?:```|$)/g); // code blocks (also unclosed)
   add(/`[^`\n]+`/g); // inline code
-  add(/\[[^\]\n]*\]\([^)\n]*\)/g); // Markdown links incl. link text
+  r.push(...markdownLinks(s)); // Markdown links incl. link text
   add(/(?:https?:\/\/|www\.)[^\s<>"„“”»«]*[^\s<>"„“”»«.,;:!?)]/gi); // URLs
-  add(/[\p{L}\p{N}._%+-]+@[\p{L}\p{N}-]+\.[\p{L}\p{N}.-]*\p{L}/gu); // email
-  add(/<[^>\n]+>/g); // HTML tags
+  r.push(...emailAddresses(s));
+  r.push(...htmlTags(s));
   return r;
 }
 
-export function overlaps(start: number, end: number, ranges: Range[]): boolean {
-  for (const [a, b] of ranges) if (start < b && end > a) return true;
-  return false;
+// The three scanners below find exactly what a regex search would find, but in linear time: a regex retries
+// every opening character up to the same stop character, which is quadratic on input like "[[[[…" or "aaaa…".
+
+/** First index ≥ from whose character is in `stops`, or s.length. */
+function nextOf(s: string, from: number, stops: string): number {
+  let i = from;
+  while (i < s.length && !stops.includes(s[i])) i++;
+  return i;
+}
+
+/** Same matches as /\[[^\]\n]*\]\([^)\n]*\)/g. */
+function markdownLinks(s: string): Range[] {
+  const out: Range[] = [];
+  let close = -1; // cached first ")" or newline at or after some position, reused while still ahead
+  for (let i = s.indexOf("["); i !== -1; ) {
+    // Every "[" before q stops at the same q, so a failure here fails for all of them.
+    const q = nextOf(s, i + 1, "]\n");
+    if (s[q] !== "]" || s[q + 1] !== "(") {
+      i = s.indexOf("[", q);
+      continue;
+    }
+    if (close < q + 2) close = nextOf(s, q + 2, ")\n");
+    if (s[close] === ")") {
+      out.push([i, close + 1]);
+      i = s.indexOf("[", close + 1);
+    } else {
+      i = s.indexOf("[", q + 1);
+    }
+  }
+  return out;
+}
+
+/** Same matches as /<[^>\n]+>/g. */
+function htmlTags(s: string): Range[] {
+  const out: Range[] = [];
+  for (let i = s.indexOf("<"); i !== -1; ) {
+    const q = nextOf(s, i + 1, ">\n");
+    if (s[q] === ">" && q > i + 1) {
+      out.push([i, q + 1]);
+      i = s.indexOf("<", q + 1);
+    } else {
+      // "<>" fails only for this "<"; a newline or the end fails for every "<" before it.
+      i = s.indexOf("<", s[q] === ">" ? q + 1 : q);
+    }
+  }
+  return out;
+}
+
+const LOCAL_CHAR = /^[\p{L}\p{N}._%+-]$/u;
+const EMAIL_DOMAIN = /[\p{L}\p{N}-]+\.[\p{L}\p{N}.-]*\p{L}/uy;
+
+/** Same matches as /[\p{L}\p{N}._%+-]+@[\p{L}\p{N}-]+\.[\p{L}\p{N}.-]*\p{L}/gu, anchored on "@". */
+function emailAddresses(s: string): Range[] {
+  const out: Range[] = [];
+  let end = 0;
+  for (let at = s.indexOf("@"); at !== -1; at = s.indexOf("@", at + 1)) {
+    if (at < end) continue;
+    // The local part reaches back to the previous match or the first non-local character ("@" is one).
+    let start = at;
+    while (start > end) {
+      const c = s.charCodeAt(start - 1);
+      const pair = c >= 0xdc00 && c <= 0xdfff && start - 2 >= end && /[\uD800-\uDBFF]/.test(s[start - 2]);
+      const ch = pair ? s.slice(start - 2, start) : s[start - 1];
+      if (!LOCAL_CHAR.test(ch)) break;
+      start -= ch.length;
+    }
+    if (start === at) continue;
+    EMAIL_DOMAIN.lastIndex = at + 1;
+    const m = EMAIL_DOMAIN.exec(s);
+    if (!m) continue;
+    end = at + 1 + m[0].length;
+    out.push([start, end]);
+  }
+  return out;
+}
+
+/** Overlap test against fixed ranges in O(log n) per call: sorted, merged ranges and binary search. */
+export function rangeChecker(ranges: Range[]): (start: number, end: number) => boolean {
+  const merged: Range[] = [];
+  for (const [a, b] of [...ranges].sort((x, y) => x[0] - y[0])) {
+    const last = merged[merged.length - 1];
+    // Touching ranges stay apart, so an empty query at their boundary overlaps neither.
+    if (last && a < last[1]) last[1] = Math.max(last[1], b);
+    else merged.push([a, b]);
+  }
+  return (start, end) => {
+    // The last range starting before `end` has the largest end of all of them (merged ranges do not overlap).
+    let lo = 0;
+    let hi = merged.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (merged[mid][0] < end) lo = mid + 1;
+      else hi = mid;
+    }
+    return lo > 0 && merged[lo - 1][1] > start;
+  };
 }
 
 export interface QuotePair {
@@ -36,23 +129,32 @@ const OPENERS: Record<string, string[]> = { "„": ["“", "”", '"'], "»": ["
 export function findQuotePairs(s: string, prot: Range[]): { pairs: QuotePair[]; unmatched: boolean } {
   const pairs: QuotePair[] = [];
   let unmatched = false;
+  const isProt = rangeChecker(prot);
+  // Next unprotected closer and next paragraph break, precomputed once instead of scanned from every opener.
+  const nextCloser = new Map<string, Int32Array>();
+  let nextBreak: Int32Array | undefined;
+  const table = (hit: (k: number) => boolean) => {
+    const t = new Int32Array(s.length + 1).fill(s.length);
+    for (let k = s.length - 1; k >= 0; k--) t[k] = hit(k) ? k : t[k + 1];
+    return t;
+  };
   for (let i = 0; i < s.length; i++) {
     const ch = s[i];
     const closers = OPENERS[ch];
-    if (!closers || overlaps(i, i + 1, prot)) continue;
+    if (!closers || isProt(i, i + 1)) continue;
     if (ch === '"' || ch === "“") {
       const prev = i > 0 ? s[i - 1] : " ";
       if (!/[\s(\[{>]/.test(prev)) continue; // e.g. inch mark 17"
     }
     if (i + 1 >= s.length || /\s/.test(s[i + 1])) continue;
-    let j = -1;
-    for (let k = i + 1; k < s.length && k < i + 400; k++) {
-      if (s[k] === "\n" && s[k + 1] === "\n") break;
-      if (closers.includes(s[k]) && !overlaps(k, k + 1, prot)) {
-        j = k;
-        break;
-      }
+    nextBreak ??= table((k) => s[k] === "\n" && s[k + 1] === "\n");
+    let closer = nextCloser.get(ch);
+    if (!closer) {
+      closer = table((k) => closers.includes(s[k]) && !isProt(k, k + 1));
+      nextCloser.set(ch, closer);
     }
+    // The closer must come within 400 characters and before the next paragraph break.
+    const j = closer[i + 1] < Math.min(s.length, i + 400, nextBreak[i + 1]) ? closer[i + 1] : -1;
     if (j === -1) {
       unmatched = true;
       continue;

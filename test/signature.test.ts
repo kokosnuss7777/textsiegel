@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { markResponse, markText, detect, verify, StreamMarker, stripSignature, verifySignature, SIGNATURE_RE } from "../src/cpmark.ts";
 import { encodeSignature, embedSignature } from "../src/signature.ts";
+import { CLASSES, QUOTE_CLASS_ID } from "../src/classes.ts";
 import { SAMPLES } from "../demo/samples.ts";
 
 const A = { id: 101, key: "customer-a-secret" };
@@ -226,4 +227,27 @@ test("content binding: a copied sentence preceded by foreign text stays valid", 
   const sentence = signed.slice(runs[0].index! + runs[0][0].length, runs[1].index! + runs[1][0].length).trim();
   const v = verify(`Notiz von mir: ${sentence}`, CUSTOMERS);
   assert.equal(v.verdict, "signed");
+});
+
+// Ticket 05: without active Choice-Point-Mark classes, marking must keep the text and only add signatures.
+test("signature only: no active classes or no choice point keeps the text in all three APIs (ticket 05)", () => {
+  const customer = { id: 101, key: "customer-a-secret" };
+  const text = "Hallo Welt. Wir melden uns bald bei Ihnen.";
+  const configs: { name: string; layers?: ("lexical" | "typography")[]; disabledClasses?: string[] }[] = [
+    { name: "layers: []", layers: [] },
+    { name: "every class disabled", disabledClasses: [...CLASSES.map((c) => c.id), QUOTE_CLASS_ID] },
+    { name: "all classes active, no choice point in the text" },
+  ];
+  for (const c of configs) {
+    const o = { key: customer.key, layers: c.layers, disabledClasses: c.disabledClasses, signature: { customerId: customer.id } };
+    assert.equal(markText(text, o).text, text, `markText, ${c.name}`);
+    const whole = markResponse(text, o).text;
+    const stream = new StreamMarker(o);
+    const streamed = [...text].map((ch) => stream.push(ch)).join("") + stream.flush();
+    for (const [api, out] of [["markResponse", whole], ["StreamMarker", streamed]] as const) {
+      assert.equal(stripSignature(out), text, `${api}, ${c.name}`);
+      assert.equal(out.match(SIGNATURE_RE)?.length, 2, `${api}, ${c.name}: one signature per sentence`);
+      assert.equal(verify(out, [customer]).verdict, "signed", `${api}, ${c.name}`);
+    }
+  }
 });

@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "prepare": "npm run build",
-    "test": "node --test test/cpmark.test.ts test/signature.test.ts test/transform.test.ts test/provenance.test.ts test/service.test.ts test/test-vectors.test.ts test/ocr-rules.test.ts",
+    "test": "node --test test/cpmark.test.ts test/signature.test.ts test/transform.test.ts test/provenance.test.ts test/service.test.ts test/test-vectors.test.ts test/text.test.ts test/server.test.ts test/ocr-rules.test.ts",
     "test:browser": "npm --prefix e2e test",
     "demo": "node demo/demo.ts",
     "server": "node server/server.ts",

@@ -13,7 +13,7 @@
 // Forging without the key: probability 2^-48 per attempt.
 
 import { createHmac, randomBytes } from "node:crypto";
-import { blockedRanges, endsWithSentenceEnd, overlaps } from "./text.ts";
+import { blockedRanges, endsWithSentenceEnd, rangeChecker } from "./text.ts";
 
 const VERSION = 0xf2;
 const PAYLOAD_LEN = 20;
@@ -110,8 +110,10 @@ function lineEndPosition(s: string, end: number): number | null {
   const start = s.lastIndexOf("\n", end - 1) + 1;
   const line = s.slice(start, end);
   if (/^ {0,3}(?:[-*_=] *){3,}$/.test(line) || (/^[\s|:-]*$/.test(line) && /\|/.test(line) && /-/.test(line))) return null;
-  const pipe = /\s*\|\s*$/.exec(line);
-  return pipe ? start + pipe.index : end;
+  // Same position as /\s*\|\s*$/ – without the regex, which retries every whitespace start on a long line.
+  const trimmed = line.trimEnd();
+  if (!trimmed.endsWith("|")) return end;
+  return start + trimmed.slice(0, -1).trimEnd().length;
 }
 
 /**
@@ -127,12 +129,12 @@ export function embedSignature(
 ): string {
   const prefix = opts.prefix ?? "";
   const s = prefix + text;
-  const blocked = blockedRanges(s);
+  const blocked = rangeChecker(blockedRanges(s));
   const at = new Set<number>(); // insert positions (after the preceding character), in s coordinates
   // Not directly behind a URL plus punctuation: Markdown renderers (GFM autolinks) would otherwise pull the
   // punctuation and the signature into the link.
   const afterUrl = (pos: number) => /(?:https?:\/\/|www\.)\S*$/i.test(s.slice(Math.max(0, pos - 300), pos));
-  const ok = (pos: number) => pos > prefix.length && /\S/.test(s[pos - 1]) && !overlaps(pos - 1, pos, blocked) && !afterUrl(pos);
+  const ok = (pos: number) => pos > prefix.length && /\S/.test(s[pos - 1]) && !blocked(pos - 1, pos) && !afterUrl(pos);
   const addLineEnd = (pos: number) => {
     const p = lineEndPosition(s, pos);
     if (p !== null && ok(p)) at.add(p);
