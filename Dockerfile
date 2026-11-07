@@ -1,6 +1,6 @@
 # textsiegel server: verification API, check page, about page (test page can be disabled with TEST_PAGE=0).
 # No runtime dependencies: Node runs the TypeScript sources directly.
-FROM node:22-alpine
+FROM node:25-alpine
 WORKDIR /app
 COPY package.json ./
 COPY src ./src
